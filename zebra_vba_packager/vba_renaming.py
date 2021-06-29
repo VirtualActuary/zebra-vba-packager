@@ -164,7 +164,6 @@ def bas_create_namespaced_classes(dirname):
             modname = vba_module_name(tokens)
 
             modname_new = f"z__{modname}__"
-            print(modname_new)
             modhead = tokenize(module_header.replace("__modulename__", modname_new))
             tokens = modhead + strip_bas_header(tokens)
 

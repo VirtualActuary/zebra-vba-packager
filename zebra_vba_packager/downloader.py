@@ -36,8 +36,7 @@ def git_download(git_source, dest, revision=None):
 
         try:
             where_git = Path([i.strip()
-                              for i in subprocess.check_output(["where", "git"]
-                                                               ).decode("utf-8").strip().split("\n")
+                              for i in subprocess.check_output(["where", "git"]).decode("utf-8").strip().split("\n")
                               if i.strip() != ""][0]).resolve()
         except (subprocess.CalledProcessError, IndexError) as e:
             raise(RuntimeError("Could not find git through `where git`"))
@@ -85,9 +84,9 @@ def git_download(git_source, dest, revision=None):
         subprocess.call([git, "clean", "-qdfx"])
         subprocess.call([sh, "-c", "for i in `git branch -a | grep remote | grep -v HEAD | grep -v master`;"
                                    "do git branch --track ${i#remotes/origin/} $i;"
-                                   "done"])
-        subprocess.call([git, "fetch",  "--all"])
-        subprocess.call([git, "fetch", "--tags", "--force"])
+                                   "done"], stderr=subprocess.DEVNULL)
+        subprocess.call([git, "fetch",  "--all"], stderr=subprocess.DEVNULL)
+        subprocess.call([git, "fetch", "--tags", "--force"],  stderr=subprocess.DEVNULL)
 
         # set revision to default branch
         if revision is None:
@@ -95,6 +94,6 @@ def git_download(git_source, dest, revision=None):
                 [sh, "-", "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'"]
             ).decode("utf-8").strip()
 
-        subprocess.call([git, "pull", "origin", revision])
+        subprocess.call([git, "pull", "origin", revision], stderr=subprocess.DEVNULL)
         subprocess.call([git, "-c", "advice.detachedHead=false", "checkout", "--force", revision])
-        subprocess.call([git, "reset", "--hard"])
+        subprocess.call([git, "reset", "--hard"], stderr=subprocess.DEVNULL)
