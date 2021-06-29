@@ -118,7 +118,7 @@ def do_renaming(dirname, user_name_transformer):
         write_tokens(key, replace_all_names(value, user_name_transformer))
 
 
-def bas_strip_bas_header(tokens):
+def strip_bas_header(tokens):
     # Strip bass vb_name attribute
     i = -1
     while (i := i + 1) < len(tokens):
@@ -166,7 +166,7 @@ def bas_create_namespaced_classes(dirname):
             modname_new = f"z__{modname}__"
             print(modname_new)
             modhead = tokenize(module_header.replace("__modulename__", modname_new))
-            tokens = modhead + bas_strip_bas_header(tokens)
+            tokens = modhead + strip_bas_header(tokens)
 
             os.remove(filename)
             newpath = filename.parent.joinpath(modname_new+".cls")
