@@ -17,30 +17,19 @@ class NameTransformer:
 
         # force strings to matching functions
         else:
-            nc = []
-            for (i, j) in name_changes:
-                if isinstance(i, str):
-                    ilow = i.lower()
-                    ii = lambda x: x.lower() == ilow
-                else:
-                    ii = i
-
-                if isinstance(j, str):
-                    jj = lambda x: j
-                else:
-                    jj = j
-
-                nc.append((ii, jj))
-
-            self.name_changes = nc
+            self.name_changes = name_changes
 
     def match(self, x):
         if isinstance(self.name_changes, dict):
             return x.lower() in self.name_changes
         else:
             for (i, j) in self.name_changes:
-                if i(x):
-                    return True
+                if isinstance(i, str):
+                    if i.lower() == x.lower():
+                        return True
+                else:
+                    if i(x):
+                        return False
         return False
 
     def transform(self, x):
@@ -48,9 +37,20 @@ class NameTransformer:
             return self.name_changes.get(x.lower(), x)
         else:
             for (i, j) in self.name_changes:
-                if i(x):
-                    return j(x)
+                if isinstance(i, str):
+                    if i.lower() == x.lower():
+                        if isinstance(j, str):
+                            return j
+                        else:
+                            return j(x)
+                else:
+                    if i(x):
+                        if isinstance(j, str):
+                            return j
+                        else:
+                            return j(x)
         return x
+
 
 
 def write_tokens(fname, tokens):
