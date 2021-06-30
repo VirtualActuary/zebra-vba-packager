@@ -177,7 +177,7 @@ class Config:
 
             # mid process
             if source.mid_process is not None:
-                source.mid_process(source)sa
+                source.mid_process(source)
 
             renames = deepcopy(source.rename_overwrites)
             if renames is None:
