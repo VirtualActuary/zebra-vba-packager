@@ -138,6 +138,7 @@ class Config:
                     if i.is_file():
                         shutil.copy(i, source.temp_downloads.joinpath(i.name))
                     else:
+                        os.makedirs(i, exist_ok=True)
                         shutil.copytree(i, source.temp_downloads.joinpath(i.name))
 
             # Do the unpacking thing
