@@ -70,7 +70,7 @@ class Source:
         self.uid = str(uuid.uuid4())[:8]
 
         link = [i for i in (self.git_source, self.url_source, self.path_source, self.uid) if i is not None][0]
-        fname = sanitize_filename(link.replace("\\", "/").rstrip("/").split("/")[-1])
+        fname = sanitize_filename(str(link).replace("\\", "/").rstrip("/").split("/")[-1])
 
         # noinspection PyProtectedMember
         self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[1].frame)
@@ -177,7 +177,7 @@ class Config:
 
             # mid process
             if source.mid_process is not None:
-                source.mid_process(source)
+                source.mid_process(source)sa
 
             renames = deepcopy(source.rename_overwrites)
             if renames is None:
