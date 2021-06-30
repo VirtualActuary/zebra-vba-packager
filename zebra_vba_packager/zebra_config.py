@@ -91,6 +91,7 @@ class Config:
     def __init__(self, *sources):
         self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[1].frame)
         self.sources = sources
+        self.output_dir = None
 
     def run(self, output_dir=None):
         for source in self.sources:
@@ -210,10 +211,13 @@ class Config:
             if source.post_process is not None:
                 source.post_process(source)
 
+        if output_dir is None and self.output_dir is None:
+            self.output_dir = Path(tempfile.gettempdir()).joinpath("zebra-vba-packager",
+                                                                   strhash(str(self.caller))[:8],
+                                                                   "output")
         if output_dir is None:
-            output_dir = Path(tempfile.gettempdir()).joinpath("zebra-vba-packager",
-                                                              strhash(str(self.caller))[:8],
-                                                              "output")
+            output_dir = self.output_dir
+
         output_dir = Path(output_dir)
 
         shutil.rmtree(output_dir, ignore_errors=True)
