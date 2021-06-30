@@ -133,13 +133,15 @@ class Config:
 
             elif ltype == "path":
                 shutil.rmtree(source.temp_downloads, ignore_errors=True)
+                os.makedirs(source.temp_downloads, exist_ok=True)
                 for i in Path(link).glob("*"):
-                    os.makedirs(i.parent, exist_ok=True)
+                    ii = source.temp_downloads.joinpath(i.name)
+                    os.makedirs(ii.parent, exist_ok=True)
+
                     if i.is_file():
-                        shutil.copy(i, source.temp_downloads.joinpath(i.name))
+                        shutil.copy(i, ii)
                     else:
-                        os.makedirs(i, exist_ok=True)
-                        shutil.copytree(i, source.temp_downloads.joinpath(i.name))
+                        shutil.copytree(i, ii)
 
             # Do the unpacking thing
             for glob in str_parameter_to_list(source.glob_extract):
