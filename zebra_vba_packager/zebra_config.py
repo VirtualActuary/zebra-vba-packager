@@ -132,7 +132,9 @@ class Config:
                     os.remove(dlfile)
 
             elif ltype == "path":
+                shutil.rmtree(source.temp_downloads, ignore_errors=True)
                 for i in Path(link).glob("*"):
+                    os.makedirs(i.parent, exist_ok=True)
                     if i.is_file():
                         shutil.copy(i, source.temp_downloads.joinpath(i.name))
                     else:
