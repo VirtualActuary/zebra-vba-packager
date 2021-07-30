@@ -56,12 +56,12 @@ def compile_xl(src_dir, dst_file=None):
         # Adhere to the compile.vbs strict naming convention
         xlname = src_dir_tmp.joinpath(src_dir.name+".xlsx")
         xlrename = src_dir_tmp.joinpath(src_dir_tmp.name+".xlsx")
-        if xlname != xlrename:
+        if not xlrename.is_file():
             if not xlname.is_file():
                 xlname = next(src_dir_tmp.glob("*.xlsx"))
             os.rename(xlname, xlrename)
 
-        subprocess.call(["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)])
+        subprocess.check_output(["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)])
 
         dst_file_tmp = next(Path(tmpdirname).glob("*.xlsb"))
 
@@ -95,7 +95,7 @@ def decompile_xl(src_file, dst_dir=None):
         src_file_tmp = Path(tmpdirname).joinpath(src_file.name)
         shutil.copy2(src_file, src_file_tmp)
 
-        subprocess.call(["cscript", "//nologo", str(_decompile_vbs), str(src_file_tmp)])
+        subprocess.check_output(["cscript", "//nologo", str(_decompile_vbs), str(src_file_tmp)])
 
         dst_dir_tmp = [i for i in Path(tmpdirname).glob("*") if i.is_dir()][0]
         xl_tmp = next(dst_dir_tmp.rglob("*.xlsx"))
