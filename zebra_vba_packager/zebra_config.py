@@ -89,7 +89,7 @@ class Source:
 class Config:
     def __init__(self, *sources):
         # noinspection PyProtectedMember
-        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[2].frame)
+        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[1].frame)
         self.sources = sources
         self.output_dir = None
 
