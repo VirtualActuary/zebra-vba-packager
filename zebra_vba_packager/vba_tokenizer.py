@@ -116,6 +116,7 @@ def tokenize(txt) -> List[VBAToken]:
     ... '''
 
     >>> "".join([i.text for i in tokenize(vba_txt)]).replace("\r", "") == vba_txt
+    True
     """
 
     tokens = []

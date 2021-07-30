@@ -5,6 +5,7 @@ from copy import deepcopy
 from download import download
 
 from .downloader import git_download
+from .util import file_md5
 from .vba_renaming import NameTransformer, cls_renaming_dict, do_renaming, bas_create_namespaced_classes, \
     vba_module_name, write_tokens
 import inspect
@@ -46,6 +47,7 @@ class Source:
     url_source: str = None
     path_source: str = None
     git_rev: str = None
+    url_md5: str = None
 
     glob_extract: Union[str, List[str]] = None
 
@@ -66,14 +68,12 @@ class Source:
         if sum([i is not None for i in (self.git_source, self.url_source, self.path_source)]) > 1:
             raise ValueError("Not more than one of git_source/url_source/path_source may be filled in")
 
-        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[1].frame)
+        # noinspection PyProtectedMember
+        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[2].frame)
         self.uid = str(uuid.uuid4())[:8]
 
         link = [i for i in (self.git_source, self.url_source, self.path_source, self.uid) if i is not None][0]
         fname = sanitize_filename(str(link).replace("\\", "/").rstrip("/").split("/")[-1])
-
-        # noinspection PyProtectedMember
-        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[1].frame)
 
         self.temp_downloads = Path(tempfile.gettempdir()).joinpath(
                                 "zebra-vba-packager",
@@ -86,10 +86,10 @@ class Source:
         os.makedirs(self.temp_transformed, exist_ok=True)
 
 
-
 class Config:
     def __init__(self, *sources):
-        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[1].frame)
+        # noinspection PyProtectedMember
+        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[2].frame)
         self.sources = sources
         self.output_dir = None
 
@@ -112,25 +112,26 @@ class Config:
                 # Archive sensitive unpacking
                 is_archive = [str(source.temp_downloads.name).lower().endswith(i) for i in
                               [".zip", ".tar", ".7z", ".rar", ".gz"]]
-                if is_archive:
-                    dlfile = source.temp_downloads.joinpath(
-                        strhash(str(source.temp_downloads))+source.temp_downloads.name)
-                else:
-                    dlfile = source.temp_downloads.joinpath(source.temp_downloads.name)
+                temp_downloads_file = Path(str(source.temp_downloads)+"-file-download")
 
-                download(link, dlfile)
+                dlfile = temp_downloads_file.joinpath(strhash(str(source.caller))+source.temp_downloads.name)
 
-                if str(dlfile).lower().endswith(".tar.gz"):
+                if source.url_md5 is not None:
+                    if not(dlfile.is_file() and file_md5(dlfile) == source.url_md5):
+                        download(link, dlfile)
+
+                if not is_archive:
+                    shutil.copy2(dlfile, source.temp_downloads.joinpath(source.temp_downloads.name))
+
+                elif str(dlfile).lower().endswith(".tar.gz"):
                     unpack(dlfile, (dlgz := str(dlfile)+"-tmpunpack"))
                     for i in Path(dlgz).rglob("*"):
                         if str(i).endswith(".tar"):
                             unpack(i, source.temp_downloads)
                     shutil.rmtree(dlgz)
-                    os.remove(dlfile)
 
-                elif sum([str(dlfile).lower().endswith(i) for i in [".zip", ".tar", ".7z", ".rar"]]):
+                elif sum([str(dlfile).lower().endswith(i) for i in [".zip", ".tar", ".7z", ".rar", ".gz"]]):
                     unpack(dlfile, dlfile.parent)
-                    os.remove(dlfile)
 
             elif ltype == "path":
                 shutil.rmtree(source.temp_downloads, ignore_errors=True)
@@ -274,10 +275,3 @@ class Config:
             output_dir.joinpath("z__MetaData.bas"),
             tokenize('\n'.join(metadata_declarations))
         )
-
-
-
-
-
-
-
