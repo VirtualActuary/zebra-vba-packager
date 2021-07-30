@@ -27,5 +27,7 @@ setuptools.setup(
     ],
     install_requires=[
         'locate',
+        'download',
+        'pathvalidate'
     ]
 )
