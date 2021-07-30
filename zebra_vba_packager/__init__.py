@@ -2,3 +2,4 @@ from .py7z import unpack, pack
 from .zebra_config import Config, Source
 from .vba_tokenizer import tokenize
 from .vba_renaming import write_tokens, strip_bas_header
+from .excel_compilation import decompile_xl, compile_xl

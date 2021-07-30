@@ -100,4 +100,3 @@ def decompile_xl(src_file, dst_dir=None):
         shutil.copytree(dst_dir_tmp, dst_dir, dirs_exist_ok=True)
 
     return dst_dir
-
