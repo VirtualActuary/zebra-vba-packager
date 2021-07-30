@@ -52,8 +52,14 @@ def compile_xl(src_dir, dst_file=None):
     with tempfile.TemporaryDirectory() as tmpdirname:
         src_dir_tmp = Path(tmpdirname).joinpath(src_dir.name)
         shutil.copytree(src_dir, src_dir_tmp)
-        os.rename(src_dir_tmp.joinpath(src_dir.name+".xlsx"),
-                  src_dir_tmp.joinpath(src_dir_tmp.name+".xlsx"))
+
+        # Adhere to the compile.vbs strict naming convention
+        xlname = src_dir_tmp.joinpath(src_dir.name+".xlsx")
+        xlrename = src_dir_tmp.joinpath(src_dir_tmp.name+".xlsx")
+        if xlname != xlrename:
+            if not xlname.is_file():
+                xlname = next(src_dir_tmp.glob("*.xlsx"))
+            os.rename(xlname, xlrename)
 
         subprocess.call(["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)])
 
