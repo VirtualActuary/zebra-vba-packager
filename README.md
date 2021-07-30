@@ -1,2 +1,4 @@
 # zebra-vba-packager
 A system for aggregating and mapping VBA projects from different sources into a single library
+
+    pip install --upgrade -e git@github.com:AutoActuary/zebra-vba-packager.git#egg=zebra_vba_packager
