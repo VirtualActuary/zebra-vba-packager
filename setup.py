@@ -17,7 +17,7 @@ setuptools.setup(
         "License :: Other/Proprietary License",
         "Operating System :: OS Independent",
     ],
-    package_data={'zebra_vba_packager': ['bin/7z.exe', 'bin/7z.dll']},
+    package_data={'zebra_vba_packager': ['bin/7z.exe', 'bin/7z.dll', 'compile.vbs', 'decompile.vbs']},
     python_requires='>=3.4',
     use_scm_version={
         'write_to': 'zebra_vba_packager/version.py',
