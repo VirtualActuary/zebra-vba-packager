@@ -7,6 +7,7 @@ import subprocess
 
 _compile_vbs = locate.this_dir().joinpath("bin", "compile.vbs")
 _decompile_vbs = locate.this_dir().joinpath("bin", "decompile.vbs")
+_runmacro_vbs = locate.this_dir().joinpath("bin", "runmacro.vbs")
 
 
 def is_locked(path):
@@ -106,3 +107,8 @@ def decompile_xl(src_file, dst_dir=None):
         shutil.copytree(dst_dir_tmp, dst_dir, dirs_exist_ok=True)
 
     return dst_dir
+
+
+def runmacro_xl(src_file, macroname=None):
+    macroarg = [macroname] if not macroname is None else []
+    subprocess.check_output(["cscript", "//nologo", str(_runmacro_vbs), str(src_file)]+macroarg)
