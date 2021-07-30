@@ -131,7 +131,7 @@ class Config:
                     shutil.rmtree(dlgz)
 
                 elif sum([str(dlfile).lower().endswith(i) for i in [".zip", ".tar", ".7z", ".rar", ".gz"]]):
-                    unpack(dlfile, dlfile.parent)
+                    unpack(dlfile, source.temp_downloads)
 
             elif ltype == "path":
                 shutil.rmtree(source.temp_downloads, ignore_errors=True)
