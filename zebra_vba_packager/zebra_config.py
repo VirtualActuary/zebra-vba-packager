@@ -30,6 +30,9 @@ from .vba_tokenizer import tokenize
 def strhash(x):
     return hashlib.md5(x.encode("utf-8")).hexdigest()
 
+def callerpath(stackframe):
+    return Path(str(locate.locate._file_path_from_stack_frame(stackframe)).replace("/", "\\")).resolve()
+
 
 def str_parameter_to_list(x):
     if isinstance(x, str):
@@ -69,7 +72,7 @@ class Source:
             raise ValueError("Not more than one of git_source/url_source/path_source may be filled in")
 
         # noinspection PyProtectedMember
-        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[2].frame)
+        self.caller = callerpath(inspect.stack()[2].frame)
         self.uid = str(uuid.uuid4())[:8]
 
         link = [i for i in (self.git_source, self.url_source, self.path_source, self.uid) if i is not None][0]
@@ -89,7 +92,7 @@ class Source:
 class Config:
     def __init__(self, *sources):
         # noinspection PyProtectedMember
-        self.caller = locate.locate._file_path_from_stack_frame(inspect.stack()[1].frame)
+        self.caller = callerpath(inspect.stack()[1].frame)
         self.sources = sources
         self.output_dir = None
 
@@ -114,7 +117,7 @@ class Config:
                               [".zip", ".tar", ".7z", ".rar", ".gz"]]
                 temp_downloads_file = Path(str(source.temp_downloads)+"-file-download")
 
-                dlfile = temp_downloads_file.joinpath(strhash(str(source.caller))+source.temp_downloads.name)
+                dlfile = temp_downloads_file.joinpath(source.temp_downloads.name)
 
                 if not(dlfile.is_file() and file_md5(dlfile) == source.url_md5):
                     download(link, dlfile, replace=True)
