@@ -116,9 +116,8 @@ class Config:
 
                 dlfile = temp_downloads_file.joinpath(strhash(str(source.caller))+source.temp_downloads.name)
 
-                if source.url_md5 is not None:
-                    if not(dlfile.is_file() and file_md5(dlfile) == source.url_md5):
-                        download(link, dlfile)
+                if not(dlfile.is_file() and file_md5(dlfile) == source.url_md5):
+                    download(link, dlfile, replace=True)
 
                 if not is_archive:
                     shutil.copy2(dlfile, source.temp_downloads.joinpath(source.temp_downloads.name))
