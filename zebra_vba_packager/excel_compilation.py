@@ -110,6 +110,6 @@ def decompile_xl(src_file, dst_dir=None):
 
 
 def runmacro_xl(src_file, macroname=None):
-    src_file = Path.resolve()
+    src_file = Path(src_file).resolve()
     macroarg = [macroname] if not macroname is None else []
     subprocess.check_output(["cscript", "//nologo", str(_runmacro_vbs), str(src_file)]+macroarg)
