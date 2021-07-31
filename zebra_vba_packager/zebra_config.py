@@ -84,6 +84,9 @@ class Source:
                                 strhash(str(self.git_source)+str(self.url_source)+str(self.path_source))[:8]+"-"+fname)
 
         self.temp_transformed = self.temp_downloads.parent.joinpath(self.temp_downloads.name+"-transformed")
+        if self.url_source:
+            self.temp_downloads_file = Path(str(self.temp_downloads)+"-file-download")
+            os.makedirs(self.temp_downloads_file, exist_ok=True)
 
         os.makedirs(self.temp_downloads, exist_ok=True)
         os.makedirs(self.temp_transformed, exist_ok=True)
@@ -113,11 +116,10 @@ class Config:
 
             elif ltype == "url":
                 # Archive sensitive unpacking
-                is_archive = [str(source.temp_downloads.name).lower().endswith(i) for i in
-                              [".zip", ".tar", ".7z", ".rar", ".gz"]]
-                temp_downloads_file = Path(str(source.temp_downloads)+"-file-download")
+                is_archive = [True for i in [".zip", ".tar", ".7z", ".rar", ".gz"]
+                              if str(source.temp_downloads.name).lower().endswith(i)]
 
-                dlfile = temp_downloads_file.joinpath(source.temp_downloads.name)
+                dlfile = source.temp_downloads_file.joinpath(source.temp_downloads.name)
 
                 if not(dlfile.is_file() and file_md5(dlfile) == source.url_md5):
                     download(link, dlfile, replace=True)
