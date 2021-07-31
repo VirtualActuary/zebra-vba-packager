@@ -56,21 +56,16 @@ def git_download(git_source, dest, revision=None):
 
         # Test if we are currently tracking the ref
         def is_on_ref(revision):
-            if revision is not None:
-                with suppress(subprocess.CalledProcessError, IndexError):
-                    if sh_lines([git, 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL)[0].startswith(revision):
-                        return True
+            if revision is None:
+                return False
+            commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
+            return commit == sh_lines([git, "rev-list", "-n", "1", revision])[0]
 
-                with suppress(subprocess.CalledProcessError):
-                    if revision in (sh_lines([git, "branch", "--show-current"], stderr=subprocess.DEVNULL) +
-                                    sh_lines([git, "tag", "-l", "--contains", "HEAD"], stderr=subprocess.DEVNULL)):
-                        return True
-            return False
-
-        if is_on_ref(revision):
-            sh_quiet([git, "reset", "--hard"])
-            sh_quiet([git, "clean", "-qdfx"])
-            return None
+        with suppress(subprocess.CalledProcessError):
+            if is_on_ref(revision):
+                sh_quiet([git, "reset", "--hard"])
+                sh_quiet([git, "clean", "-qdfx"])
+                return None
 
         gitremote = None # noqa
         with suppress(subprocess.CalledProcessError):
@@ -93,8 +88,9 @@ def git_download(git_source, dest, revision=None):
 
         for get_all_upstream in [False, True]:
             if get_all_upstream:
-                for branch in sh_lines(git, "branch", "-a"):
-                    print(branch)
+                for branch in sh_lines([git, "branch", "-a"]):
+                    if "->" in branch:
+                        continue
                     sh_quiet([git, "branch", "--track", branch.split("/")[-1], branch])
 
             sh_quiet([git, "fetch",  "--all"])
@@ -105,8 +101,7 @@ def git_download(git_source, dest, revision=None):
                 revision = sh_lines([git, "symbolic-ref", "refs/remotes/origin/HEAD"])[0].split("/")[-1]
 
             sh_quiet([git, "pull", "origin", revision])
-            sh_quiet([git, "-c", "checkout", "--force", revision])
-            sh_quiet([git, "reset", "--hard"])
+            sh_quiet([git, "checkout", "--force", revision])
 
             if revision is None or is_on_ref(revision):
                 return None
