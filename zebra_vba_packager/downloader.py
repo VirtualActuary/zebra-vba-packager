@@ -50,32 +50,21 @@ def git_download(git_source, dest, revision=None):
             raise (RuntimeError(f"Could not create and enter {dest}"))
 
         try:
-            where_git = Path(sh_lines('where git')[0]).resolve()
+            git = str(Path(sh_lines('where git')[0]).resolve())
         except (subprocess.CalledProcessError, IndexError) as e:
             raise(RuntimeError("Could not find git through `where git`"))
-
-        i = 0
-        where_sh = where_git.joinpath("bin", "sh.exe")
-        while not (where_sh := where_sh.parent.parent.parent.joinpath("bin", "sh.exe")).is_file():
-            if (i := i+1) == 1000:
-                raise(RuntimeError("Could not find sh relative to `where git`"))
-
-        git = str(where_git)
-        sh = str(where_sh)
 
         # Test if we are currently tracking the ref
         def is_on_ref(revision):
             if revision is not None:
                 with suppress(subprocess.CalledProcessError, IndexError):
-                    if sh_lines([git, 'rev-parse', 'HEAD'],
-                                stderr=subprocess.DEVNULL)[0].startswith(revision):
+                    if sh_lines([git, 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL)[0].startswith(revision):
                         return True
 
                 with suppress(subprocess.CalledProcessError):
                     if revision in (sh_lines([git, "branch", "--show-current"], stderr=subprocess.DEVNULL) +
                                     sh_lines([git, "tag", "-l", "--contains", "HEAD"], stderr=subprocess.DEVNULL)):
                         return True
-
             return False
 
         if is_on_ref(revision):
@@ -104,7 +93,8 @@ def git_download(git_source, dest, revision=None):
 
         for get_all_upstream in [False, True]:
             if get_all_upstream:
-                for branch in sh_lines([sh, "-c", f"git branch -a | grep remote | grep -v HEAD;"]):
+                for branch in sh_lines(git, "branch", "-a"):
+                    print(branch)
                     sh_quiet([git, "branch", "--track", branch.split("/")[-1], branch])
 
             sh_quiet([git, "fetch",  "--all"])
@@ -112,8 +102,7 @@ def git_download(git_source, dest, revision=None):
 
             # set revision to default branch
             if revision is None:
-                revision = sh_lines(
-                    [sh, "-", "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'"])[0]
+                revision = sh_lines([git, "symbolic-ref", "refs/remotes/origin/HEAD"])[0].split("/")[-1]
 
             sh_quiet([git, "pull", "origin", revision])
             sh_quiet([git, "-c", "checkout", "--force", revision])
