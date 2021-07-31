@@ -27,6 +27,21 @@ def working_directory(path):
         os.chdir(prev_cwd)
 
 
+def sh_lines(command, **kwargs):
+    shell = isinstance(command, str)
+    lst = subprocess.check_output(command,
+                                  shell=isinstance(command, str),
+                                  **kwargs).decode("utf-8").strip().split("\n")
+    return [] if lst == [''] else [i.strip() for i in lst]
+
+
+def sh_quiet(command):
+    return subprocess.call(command,
+                           shell=isinstance(command, str),
+                           stderr=subprocess.DEVNULL,
+                           stdout=subprocess.DEVNULL)
+
+
 def git_download(git_source, dest, revision=None):
     os.makedirs(dest, exist_ok=True)
 
@@ -35,38 +50,39 @@ def git_download(git_source, dest, revision=None):
             raise (RuntimeError(f"Could not create and enter {dest}"))
 
         try:
-            where_git = Path([i.strip()
-                              for i in subprocess.check_output(["where", "git"]).decode("utf-8").strip().split("\n")
-                              if i.strip() != ""][0]).resolve()
+            where_git = Path(sh_lines('where git')[0]).resolve()
         except (subprocess.CalledProcessError, IndexError) as e:
             raise(RuntimeError("Could not find git through `where git`"))
 
         i = 0
         where_sh = where_git.joinpath("bin", "sh.exe")
         while not (where_sh := where_sh.parent.parent.parent.joinpath("bin", "sh.exe")).is_file():
-            if (i:=i+1) == 1000:
+            if (i := i+1) == 1000:
                 raise(RuntimeError("Could not find sh relative to `where git`"))
 
         git = str(where_git)
         sh = str(where_sh)
 
         # If already on correct commit, don't do extra work
-        if revision is not None and len(revision) >= 6: #possible hash
-            commit = ''
-            with suppress(subprocess.CalledProcessError):
-                commit = [i.strip() for i in subprocess.check_output(
-                            ['git', 'rev-parse', 'HEAD'], stderr=subprocess.DEVNULL).decode("utf-8").strip().split("\n")
-                                if i.strip() != ""][0]
-            if commit.startswith(revision):
-                subprocess.call([git, "reset", "--hard"])
-                subprocess.call([git, "clean", "-qdfx"])
-                return
+        def is_on_ref():
+            if revision is not None:
+                commit = ''
+                with suppress(subprocess.CalledProcessError):
+                    commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
+                    refs = (sh_lines([git, "branch", "-–show-current"]) +
+                            sh_lines([git, "tag", "-l", "--contains", "HEAD"]))
+                if commit.startswith(revision) or (revision in refs):
+                    return True
+            return False
 
-        gitremote = None
+        if is_on_ref():
+            sh_quiet([git, "reset", "--hard"])
+            sh_quiet([git, "clean", "-qdfx"])
+            return None
+
+        gitremote = None # noqa
         with suppress(subprocess.CalledProcessError):
-            gitremote = [i.strip() for i in subprocess.check_output(
-                            ['git', 'config', '--get', 'remote.origin.url']).decode("utf-8").strip().split("\n")
-                                if i.strip() != ""][0]
+            gitremote = sh_lines([git, 'config', '--get', 'remote.origin.url'])[0]
 
         # If already correct git source, don't re-download
         if gitremote != git_source:
@@ -76,24 +92,29 @@ def git_download(git_source, dest, revision=None):
                 else:
                     shutil.rmtree(i)
 
-            subprocess.call(["git", "clone", git_source, "."])
+            subprocess.call([git, "clone", git_source, str(Path(".").resolve())])
             if not Path("./.git").is_dir():
                 raise(RuntimeError(f"Could not `git clone {git_source} .`"))
 
-        subprocess.call([git, "reset", "--hard"])
-        subprocess.call([git, "clean", "-qdfx"])
-        subprocess.call([sh, "-c", "for i in `git branch -a | grep remote | grep -v HEAD | grep -v master`;"
-                                   "do git branch --track ${i#remotes/origin/} $i;"
-                                   "done"], stderr=subprocess.DEVNULL)
-        subprocess.call([git, "fetch",  "--all"], stderr=subprocess.DEVNULL)
-        subprocess.call([git, "fetch", "--tags", "--force"],  stderr=subprocess.DEVNULL)
+        sh_quiet([git, "reset", "--hard"])
+        sh_quiet([git, "clean", "-qdfx"])
+        sh_quiet([sh, "-c", "for i in `git branch -a | grep remote | grep -v HEAD | grep -v master`;"
+                            "do git branch --track ${i#remotes/origin/} $i;"
+                            "done"])
+        sh_quiet([git, "fetch",  "--all"])
+        sh_quiet([git, "fetch", "--tags", "--force"])
 
         # set revision to default branch
         if revision is None:
-            revision = subprocess.check_output(
-                [sh, "-", "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'"]
-            ).decode("utf-8").strip()
+            revision = sh_lines(
+                [sh, "-", "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'"])[0]
 
-        subprocess.call([git, "pull", "origin", revision], stderr=subprocess.DEVNULL)
-        subprocess.call([git, "-c", "advice.detachedHead=false", "checkout", "--force", revision])
-        subprocess.call([git, "reset", "--hard"], stderr=subprocess.DEVNULL)
+        sh_quiet([git, "pull", "origin", revision])
+        sh_quiet([git, "-c", "advice.detachedHead=false", "checkout", "--force", revision])
+        sh_quiet([git, "reset", "--hard"])
+        sh_quiet([git, "clean", "-qdfx"])
+
+        if revision is None or is_on_ref():
+            return None
+        else:
+            raise RuntimeError(f"Could not check out {revision}")

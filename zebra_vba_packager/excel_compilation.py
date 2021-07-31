@@ -66,6 +66,7 @@ def compile_xl(src_dir, dst_file=None):
 
         dst_file_tmp = next(Path(tmpdirname).glob("*.xlsb"))
 
+        os.makedirs(dst_file.parent, exist_ok=True)
         shutil.copy2(dst_file_tmp, dst_file)
 
     return dst_file
