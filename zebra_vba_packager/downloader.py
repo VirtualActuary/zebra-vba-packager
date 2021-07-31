@@ -63,8 +63,8 @@ def git_download(git_source, dest, revision=None):
         git = str(where_git)
         sh = str(where_sh)
 
-        # If already on correct commit, don't do extra work
-        def is_on_ref():
+        # Test if we are currently tracking the ref
+        def is_on_ref(revision):
             if revision is not None:
                 with suppress(subprocess.CalledProcessError, IndexError):
                     if sh_lines([git, 'rev-parse', 'HEAD'],
@@ -78,7 +78,7 @@ def git_download(git_source, dest, revision=None):
 
             return False
 
-        if is_on_ref():
+        if is_on_ref(revision):
             sh_quiet([git, "reset", "--hard"])
             sh_quiet([git, "clean", "-qdfx"])
             return None
@@ -101,23 +101,26 @@ def git_download(git_source, dest, revision=None):
 
         sh_quiet([git, "reset", "--hard"])
         sh_quiet([git, "clean", "-qdfx"])
-        sh_quiet([sh, "-c", "for i in `git branch -a | grep remote | grep -v HEAD | grep -v master`;"
-                            "do git branch --track ${i#remotes/origin/} $i;"
-                            "done"])
-        sh_quiet([git, "fetch",  "--all"])
-        sh_quiet([git, "fetch", "--tags", "--force"])
 
-        # set revision to default branch
-        if revision is None:
-            revision = sh_lines(
-                [sh, "-", "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'"])[0]
+        for get_all_upstream in [False, True]:
+            if True:
+                sh_quiet([sh, "-c", "for i in `git branch -a`;                        "
+                                    "  do git branch --track ${i#remotes/origin/} $i; "
+                                    "done                                             "])
 
-        sh_quiet([git, "pull", "origin", revision])
-        sh_quiet([git, "-c", "advice.detachedHead=false", "checkout", "--force", revision])
-        sh_quiet([git, "reset", "--hard"])
-        sh_quiet([git, "clean", "-qdfx"])
+            sh_quiet([git, "fetch",  "--all"])
+            sh_quiet([git, "fetch", "--tags", "--force"])
 
-        if revision is None or is_on_ref():
-            return None
-        else:
-            raise RuntimeError(f"Could not check out {revision}")
+            # set revision to default branch
+            if revision is None:
+                revision = sh_lines(
+                    [sh, "-", "git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'"])[0]
+
+            sh_quiet([git, "pull", "origin", revision])
+            sh_quiet([git, "-c", "checkout", "--force", revision])
+            sh_quiet([git, "reset", "--hard"])
+
+            if revision is None or is_on_ref(revision):
+                return None
+
+        raise RuntimeError(f"Could not check out {revision}")
