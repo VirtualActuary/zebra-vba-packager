@@ -104,9 +104,9 @@ def git_download(git_source, dest, revision=None):
 
         for get_all_upstream in [False, True]:
             if True:
-                sh_quiet([sh, "-c", "for i in `git branch -a | grep remote`;          "
-                                    "  do git branch --track ${i#remotes/origin/} $i; "
-                                    "done                                             "])
+                sh_quiet([sh, "-c", r"""git branch -r | grep -v '\->' | while read remote;"""
+                                    r"""do git branch --track "${remote#origin/}" "$remote";"""
+                                    r"""done"""])
 
             sh_quiet([git, "fetch",  "--all"])
             sh_quiet([git, "fetch", "--tags", "--force"])
