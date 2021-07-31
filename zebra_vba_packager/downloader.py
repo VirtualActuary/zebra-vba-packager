@@ -66,13 +66,15 @@ def git_download(git_source, dest, revision=None):
         # If already on correct commit, don't do extra work
         def is_on_ref():
             if revision is not None:
-                commit = ''
-                with suppress(subprocess.CalledProcessError):
-                    commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
-                    refs = (sh_lines([git, "branch", "--show-current"]) +
-                            sh_lines([git, "tag", "-l", "--contains", "HEAD"]))
-                    if commit.startswith(revision) or (revision in refs):
+                with suppress(subprocess.CalledProcessError, IndexError):
+                    if sh_lines([git, 'rev-parse', 'HEAD'])[0].startswith(revision):
                         return True
+
+                with suppress(subprocess.CalledProcessError):
+                    if revision in (sh_lines([git, "branch", "--show-current"]) +
+                                    sh_lines([git, "tag", "-l", "--contains", "HEAD"])):
+                        return True
+
             return False
 
         if is_on_ref():
