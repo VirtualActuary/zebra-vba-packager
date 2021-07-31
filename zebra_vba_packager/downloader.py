@@ -67,12 +67,13 @@ def git_download(git_source, dest, revision=None):
         def is_on_ref():
             if revision is not None:
                 with suppress(subprocess.CalledProcessError, IndexError):
-                    if sh_lines([git, 'rev-parse', 'HEAD'])[0].startswith(revision):
+                    if sh_lines([git, 'rev-parse', 'HEAD'],
+                                stderr=subprocess.DEVNULL)[0].startswith(revision):
                         return True
 
                 with suppress(subprocess.CalledProcessError):
-                    if revision in (sh_lines([git, "branch", "--show-current"]) +
-                                    sh_lines([git, "tag", "-l", "--contains", "HEAD"])):
+                    if revision in (sh_lines([git, "branch", "--show-current"], stderr=subprocess.DEVNULL) +
+                                    sh_lines([git, "tag", "-l", "--contains", "HEAD"], stderr=subprocess.DEVNULL)):
                         return True
 
             return False
