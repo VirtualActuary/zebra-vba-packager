@@ -103,7 +103,7 @@ def git_download(git_source, dest, revision=None):
         sh_quiet([git, "clean", "-qdfx"])
 
         for get_all_upstream in [False, True]:
-            if True:
+            if get_all_upstream:
                 sh_quiet([sh, "-c", r"""git branch -r | grep -v '\->' | while read remote;"""
                                     r"""do git branch --track "${remote#origin/}" "$remote";"""
                                     r"""done"""])
