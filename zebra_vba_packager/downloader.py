@@ -104,7 +104,10 @@ def git_download(git_source, dest, revision=None):
 
         for get_all_upstream in [False, True]:
             if get_all_upstream:
-                sh_quiet([sh, "-c", "for remote in `git branch -r | grep -v /HEAD`; do git checkout --track $remote ; done"])
+                current_branch = sh_lines([git, "branch", "--show-current"], stderr=subprocess.DEVNULL)
+                subprocess.call([sh, "-c", f"for i in `git branch -a | grep remote | grep -v HEAD | grep -v {current_branch}`; "
+                                            "do git branch --track ${i#remotes/origin/} $i;"
+                                            "done"])
 
             sh_quiet([git, "fetch",  "--all"])
             sh_quiet([git, "fetch", "--tags", "--force"])
