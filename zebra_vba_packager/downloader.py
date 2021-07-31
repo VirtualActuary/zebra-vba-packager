@@ -69,7 +69,7 @@ def git_download(git_source, dest, revision=None):
                 commit = ''
                 with suppress(subprocess.CalledProcessError):
                     commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
-                    refs = (sh_lines([git, "branch", "-–show-current"]) +
+                    refs = (sh_lines([git, "branch", "--show-current"]) +
                             sh_lines([git, "tag", "-l", "--contains", "HEAD"]))
                 if commit.startswith(revision) or (revision in refs):
                     return True
