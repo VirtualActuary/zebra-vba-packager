@@ -61,7 +61,7 @@ def git_download(git_source, dest, revision=None):
             commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
             return commit == sh_lines([git, "rev-list", "-n", "1", revision])[0]
 
-        with suppress(subprocess.CalledProcessError):
+        if Path(".git").is_dir():
             if is_on_ref(revision):
                 sh_quiet([git, "reset", "--hard"])
                 sh_quiet([git, "clean", "-qdfx"])
