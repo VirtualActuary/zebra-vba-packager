@@ -123,6 +123,8 @@ class Config:
 
                 if not(dlfile.is_file() and file_md5(dlfile) == source.url_md5):
                     download(link, dlfile, replace=True)
+                    if dlfile.is_file():
+                        print(f"MD5 {file_md5(dlfile)} for link {link}")
 
                 if not is_archive:
                     shutil.copy2(dlfile, source.temp_downloads.joinpath(source.temp_downloads.name))
