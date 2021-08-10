@@ -142,7 +142,7 @@ def saveas_xlsx(src_file, dst_file):
             if not dst_tmp.exists():
                 raise RuntimeError(f"Could not save `{src_file}` as `{dst_file}`")
 
-            os.makedirs(dst_file.parent)
+            os.makedirs(dst_file.parent, exist_ok=True)
             shutil.copy2(dst_tmp, dst_file)
 
     return dst_file
