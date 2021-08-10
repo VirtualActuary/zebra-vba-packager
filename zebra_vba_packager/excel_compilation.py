@@ -4,10 +4,12 @@ import os
 import tempfile
 import shutil
 import subprocess
+import uuid
 
 _compile_vbs = locate.this_dir().joinpath("bin", "compile.vbs")
 _decompile_vbs = locate.this_dir().joinpath("bin", "decompile.vbs")
 _runmacro_vbs = locate.this_dir().joinpath("bin", "runmacro.vbs")
+_saveasxlsx_vbs = locate.this_dir().joinpath("bin", "saveasxlsx.vbs")
 
 
 def is_locked(path):
@@ -114,3 +116,33 @@ def runmacro_xl(src_file, macroname=None):
     src_file = Path(src_file).resolve()
     macroarg = [macroname] if not macroname is None else []
     subprocess.check_output(["cscript", "//nologo", str(_runmacro_vbs), str(src_file)]+macroarg)
+
+
+def saveas_xlsx(src_file, dst_file):
+    """
+    >>> xl = locate.this_dir().joinpath("../test/example-xl-with-vba.xlsb")
+    >>> outfile = xl.parent.joinpath("temporary_output/example-xl-as-xlsx.xlsx")
+    >>> saveas_xlsx(xl, outfile) #doctest: +ELLIPSIS
+    WindowsPath('...example-xl-as-xlsx.xlsx')
+
+    """
+    src_file, dst_file = Path(src_file).resolve(), Path(dst_file).resolve()
+
+    if err := is_locked(dst_file):
+        raise err(f"File '{dst_file}' cannot be overwritten")
+
+    with tempfile.TemporaryDirectory() as src_d:
+        with tempfile.TemporaryDirectory() as dst_d:
+            src_tmp = Path(src_d).joinpath(uuid.uuid4().hex+"-"+src_file.name)
+            dst_tmp = Path(src_d).joinpath(uuid.uuid4().hex+"-"+dst_file.name)
+
+            shutil.copy2(src_file, src_tmp)
+            subprocess.check_output(["cscript", "//nologo", str(_saveasxlsx_vbs), str(src_tmp), str(dst_tmp)])
+
+            if not dst_tmp.exists():
+                raise RuntimeError(f"Could not save `{src_file}` as `{dst_file}`")
+
+            os.makedirs(dst_file.parent)
+            shutil.copy2(dst_tmp, dst_file)
+
+    return dst_file
