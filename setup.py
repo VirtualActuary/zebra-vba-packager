@@ -1,5 +1,6 @@
 import setuptools
 import os
+bin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "zebra_vba_packager", "bin")
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -18,7 +19,7 @@ setuptools.setup(
         "License :: Other/Proprietary License",
         "Operating System :: OS Independent",
     ],
-    package_data={'zebra_vba_packager': [os.path.join('bin', i) for i in os.listdir('bin')]},
+    package_data={'zebra_vba_packager': [os.path.join('bin', i) for i in os.listdir(bin_dir)]},
     python_requires='>=3.4',
     use_scm_version={
         'write_to': 'zebra_vba_packager/version.py',
