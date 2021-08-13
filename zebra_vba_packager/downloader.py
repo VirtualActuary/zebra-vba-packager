@@ -59,7 +59,10 @@ def git_download(git_source, dest, revision=None):
             if revision is None:
                 return False
             commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
-            return commit == sh_lines([git, "rev-list", "-n", "1", revision])[0]
+            try:
+                return commit == sh_lines([git, "rev-list", "-n", "1", revision])[0]
+            except subprocess.CalledProcessError:
+                return False
 
         if Path(".git").is_dir():
             if is_on_ref(revision):
