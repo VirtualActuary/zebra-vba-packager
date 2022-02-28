@@ -225,7 +225,7 @@ class Config:
                 source.post_process(source)
 
         if output_dir is None and self.output_dir is None:
-            self.output_dir = Path(tempfile.gettempdir()).joinpath("zebra-vba-packager",self.caller_id[:8],"output")
+            self.output_dir = Path(tempfile.gettempdir()).joinpath("zebra-vba-packager", self.caller_id[:8], "output")
         if output_dir is None:
             output_dir = self.output_dir
 
