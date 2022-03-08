@@ -4,8 +4,9 @@ from copy import deepcopy
 
 from download import download
 
+from .bas_combining import compile_bas_sources_into_single_file
 from .downloader import git_download
-from .util import file_md5
+from .util import file_md5, first
 from .vba_renaming import NameTransformer, cls_renaming_dict, do_renaming, bas_create_namespaced_classes, \
     vba_module_name, write_tokens
 import inspect
@@ -63,6 +64,8 @@ class Source:
 
     mid_process: Callable = None
 
+    combine_bas_files: Union[bool, str] = False
+
     auto_bas_namespace: bool = True
     auto_cls_rename: bool = True
     rename_overwrites: Union[Dict[str, str],
@@ -85,7 +88,7 @@ class Source:
 
         self.temp_downloads = Path(tempfile.gettempdir()).joinpath(
                                 "zebra-vba-packager",
-                                self.caller_id[:8]+"-"+
+                                self.caller_id[:8]+"-" +
                                 strhash(str(self.git_source)+str(self.url_source)+str(self.path_source))[:8]+"-"+fname)
 
         self.temp_transformed = self.temp_downloads.parent.joinpath(self.temp_downloads.name+"-transformed")
@@ -216,6 +219,20 @@ class Config:
                 rename_transform = NameTransformer(renames)
 
             do_renaming(source.temp_transformed, rename_transform)
+
+            if source.combine_bas_files:
+                name = source.combine_bas_files if isinstance(source.combine_bas_files, str) else None
+                sources = {}
+                for f in Path(source.temp_transformed).rglob("*.bas"):
+                    with f.open("r") as rf:
+                        sources[f] = rf.read()
+
+                txt = compile_bas_sources_into_single_file(sources, module_name=name)
+                for i in sources:
+                    i.unlink()
+
+                with first(sources).open("wb") as fw:
+                    fw.write(txt.encode("utf-8"))
 
             if source.auto_bas_namespace:
                 bas_create_namespaced_classes(source.temp_transformed)
