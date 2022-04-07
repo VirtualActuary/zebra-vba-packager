@@ -1,11 +1,13 @@
 from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
 from pprint import pprint
 from textwrap import indent
 from typing import Dict, Union, List
 from functools import reduce
 import operator
 
+from .match_tokens import match_tokens
 from .vba_renaming import vba_module_name
 from .util import first, to_unix_line_endings, to_dos_line_endings
 from .vba_tokenizer import VBAToken, tokenize, tokens_to_str
@@ -49,35 +51,12 @@ def get_private_names(tokens: List[VBAToken]):
         ['funcA', 'funcB', 'theConst', 'Bla', 'Bla2']
     """
 
-    private_names = []
-    for i in range(len(tokens)):
-        if i + 8 >= len(tokens):
-            break
-
-        priv_x_ = (tokens[i].type == 'reserved' and tokens[i].text.lower() == 'private' and
-                      tokens[i + 1].type == 'space' and tokens[i + 2].type == 'reserved' and
-                      tokens[i + 3].type == 'space')
-
-        priv_x_decl_x_ = (priv_x_ and tokens[i + 2].text.lower() == 'declare' and tokens[i + 3].type == 'space' and
-                          tokens[i + 4].type == 'reserved' and tokens[i + 5].type == 'space')
-
-        priv_x_decl_ptrsafe_x_x = (priv_x_decl_x_ and tokens[i + 4].text.lower() == 'ptrsafe' and
-                                  tokens[i + 5].type == 'space' and tokens[i + 6].type == 'reserved' and
-                                  tokens[i + 7].type == 'space' and tokens[i + 8].type == 'name')
-
-        # private declare ptrsafe function/sub <name>
-        if priv_x_decl_ptrsafe_x_x:
-            private_names.append(tokens[i + 8].text)
-
-        # private declare function/sub <name>
-        elif priv_x_decl_x_:
-            if tokens[i + 6].type == 'name':
-                private_names.append(tokens[i + 6].text)
-
-        elif priv_x_ and tokens[i + 4].type == 'name':
-            private_names.append(tokens[i + 4].text)
-
-    return private_names
+    return [
+        tokens[j-1].text for (i, j) in match_tokens(
+            tokens,
+            "private [static] [declare] [ptrsafe] function|sub|parameter|enum|const .*",
+            on_line_start=True
+    )]
 
 
 def compile_code_into_sections(
@@ -87,98 +66,6 @@ def compile_code_into_sections(
     r"""
     Split VBA code into a few high-level catagories, such as `#if`, `function`, `option`, `declare`, and
     `unknown`. Extend `unknown` into more catagories as they are needed by other parts of the codebase.
-
-    Examples:
-        >>> x = '''Attribute VB_Name = "MiscArray"
-        ...
-        ... Option Explicit
-        ...
-        ... ' Comment
-        ... Private Function Bla(arr As Variant)
-        ...     Bla = True
-        ... End Function
-        ... Private Function Bla2(arr As Variant)
-        ...     Bla2 = True
-        ... End Function
-        ... '''
-        >>> y = compile_code_into_sections(x)
-
-        >>> [i.type for i in y]
-        ['attribute', 'unknown', 'option', 'unknown', 'function', 'unknown', 'function', 'unknown']
-
-        >>> "".join([tokens_to_str(i.tokens) for i in y]).replace('\r\n', '\n') == x
-        True
-
-        >>> x = '''Attribute VB_Name = "aErrorEnums"
-        ... ' Comment
-        ...
-        ... Option Explicit
-        ...
-        ... Enum ErrNr
-        ...     Val1 = 3
-        ...     Val2 = 5
-        ... End Enum
-        ... '''
-        >>> y = compile_code_into_sections(x)
-
-        >>> [i.type for i in y]
-        ['attribute', 'unknown', 'option', 'unknown']
-
-        >>> "".join([tokens_to_str(i.tokens) for i in y]).replace('\r\n', '\n') == x
-        True
-
-        >>> x = '''Attribute VB_Name = "MiscAssign"
-        ...
-        ... Option Explicit
-        ... Option Private
-        ...
-        ... Private Declare PtrSafe Function ShellExecuteA Lib "Shell32.dll" _
-        ...    (ByVal hwnd As Long, _
-        ...    ByVal lpOperation As String, _
-        ...    ByVal lpFile As String, _
-        ...    ByVal lpParameters As String, _
-        ...    ByVal lpDirectory As String, _
-        ...    ByVal nShowCmd As Long) As Long
-        ... '''
-        >>> y = compile_code_into_sections(x)
-
-        >>> [i.type for i in y]
-        ['attribute', 'unknown', 'option', 'unknown', 'option', 'unknown', 'declare', 'unknown']
-
-
-        >>> x = '''Attribute VB_Name = "MiscAssign"
-        ...
-        ... Option Explicit
-        ... Option Private
-        ...
-        ... #If VBA7 And Win64 Then
-        ...     Private Declare PtrSafe Function ShellExecuteA Lib "Shell32.dll" _
-        ...         (ByVal hwnd As Long, _
-        ...         ByVal lpOperation As String, _
-        ...         ByVal lpFile As String, _
-        ...        ByVal lpParameters As String, _
-        ...         ByVal lpDirectory As String, _
-        ...         ByVal nShowCmd As Long) As Long
-        ... #Else
-        ...
-        ...     Private Declare Function ShellExecuteA Lib "Shell32.dll" _
-        ...         (ByVal hwnd As Long, _
-        ...         ByVal lpOperation As String, _
-        ...         ByVal lpFile As String, _
-        ...         ByVal lpParameters As String, _
-        ...         ByVal lpDirectory As String, _
-        ...         ByVal nShowCmd As Long) As Long
-        ... #End If
-        ... '''
-        >>> y = compile_code_into_sections(x)
-
-        >>> [i.type for i in y]
-        ['attribute', 'unknown', 'option', 'unknown', 'option', 'unknown', '#if', 'unknown']
-
-        >>> "".join([tokens_to_str(i.tokens) for i in y]).replace('\r\n', '\n') == x
-        True
-
-
     """
     tokens = input
     if not isinstance(tokens, list):
@@ -218,119 +105,60 @@ def compile_code_into_sections(
             c3
         )
 
+    def find_section(tokens, start_match_string, end_match_string):
+        i, j = next(match_tokens(tokens, start_match_string, on_line_start=True))
+        k, l = [_ + j for _ in next(match_tokens(tokens[j:], end_match_string, on_line_start=True))]
+        return i, l
 
-    # Find #if
+    # If seperation
     idx = -1
-    while(idx := idx+1) < len(classifiers):
+    while (idx := idx + 1) < len(classifiers):
         if classifiers[idx].type != "unknown":
             continue
 
         tokens = classifiers[idx].tokens
+        try:
+            i, j = find_section(tokens, "#if", "#end\s*if")
+            extend_classification_list(classifiers, idx, i, j, params2=VBASectionClassifier(type="#if"))
+            idx = idx - 1
+        except StopIteration:
+            break
 
-        # Merge spaces together
-        i = -1
-        while (i := i + 1) < len(tokens):
-            start_marker = i
-            end_marker = None
-            if tokens[i].type == "#if" and tokens[i].text.lower() == "#if":
-                j = i
-                while (j := j + 1) < len(tokens):
-                    if tokens[j].type == "#if" and tokens[j].text.lower().startswith("#end"):
-                        end_marker = j+1
-                        break
-
-            if end_marker is not None:
-                extend_classification_list(
-                    classifiers,
-                    idx,
-                    start_marker,
-                    end_marker,
-                    params2=VBASectionClassifier(type="#if")
-                )
-                idx -= 1
-                break
-
-    # Find functions
-    func_lables = {'property', 'sub', 'function'}
+    # Function/enum seperation
     idx = -1
-    while(idx := idx+1) < len(classifiers):
-        if classifiers[idx].type != "unknown":
-            continue
-
-        tokens = classifiers[idx].tokens
-
-        # Find sandwich for `[private/public] Function .... End Function`
-        i = len(tokens)
-        while (i := i - 1) >= 0:
-            if (tokens[i].type == 'reserved' and tokens[i].text.lower() in func_lables
-                    and i-1 >= 0 and tokens[i-1].type == 'space'
-                    and i-2 >= 0 and tokens[i-2].text.lower() == 'end'):
-                params2 = VBASectionClassifier(type='function')
-
-                start_marker = None
-                end_marker = i+1
-
-                j = i-2
-                while (j := j - 1) >= 0:
-                    if (tokens[j].type == 'reserved' and
-                            tokens[j].text.lower() in func_lables):
-
-                        #allowed `[<private/public>]<space>function`
-                        if (j - 2 >= 0 and tokens[j - 1].type == "space"
-                                and tokens[j - 2].text.lower() in ('private', 'public')):
-                            start_marker = j - 2
-                        else:
-                            start_marker = j
-                        break
-
-                if start_marker is not None:
-                    extend_classification_list(classifiers, idx, start_marker, end_marker, params2=params2)
-                    idx -= 1
-                    break
-
-    # Find declare
-    idx = -1
-    while(idx := idx+1) < len(classifiers):
+    while (idx := idx + 1) < len(classifiers):
         if classifiers[idx].type != "unknown":
             continue
         tokens = classifiers[idx].tokens
+        try:
+            pre = "[private|public] property|sub|function|enum"
+            i, j = find_section(tokens, pre, r"end property|sub|function|enum")
+            type_ = tokens[j-1].text.lower()
+            type_ = "function" if type_ in ("sub", "property") else type_
+            extend_classification_list(classifiers, idx, i, j, params2=VBASectionClassifier(type=type_))
+        except StopIteration:
+            break
 
-        i = -1
-        while (i := i + 1) < len(tokens):
-            start_marker = i
-            end_marker = None
-            params2 = None
+    # Declare/option/attribute separation (ends on newline or end of file)
+    idx = -1
+    while (idx := idx + 1) < len(classifiers):
+        if classifiers[idx].type != "unknown":
+            continue
+        tokens = classifiers[idx].tokens
+        try:
+            i, i0 = next(match_tokens(tokens, "[private|public] declare|option|attribute", on_line_start=True))
+            try:
+                _, j = [x + i0 for x in next(match_tokens(tokens[i0:], r"\r\n"))]
+            except StopIteration:
+                j = len(tokens)
 
-            if tokens[i].type == "reserved":
-                ttext = tokens[i].text.lower()
-
-                if ttext == 'declare':
-                    params2 = VBASectionClassifier(type='declare')
-                    end_marker = len(tokens)
-
-                elif ttext in ('private', 'public'):
-                    if (i + 2 >= 0 and tokens[i + 1].type == "space"
-                            and tokens[i + 2].text.lower() == 'declare'):
-                        params2 = VBASectionClassifier(type='declare', private=(ttext == 'private'))
-                        end_marker = len(tokens)
-
-                elif ttext == 'option':
-                    params2 = VBASectionClassifier(type='option')
-                    end_marker = len(tokens)
-
-                elif ttext == 'attribute':
-                    params2 = VBASectionClassifier(type='attribute')
-                    end_marker = len(tokens)
-
-            if end_marker is not None:
-                for j in range(i + 1, len(tokens)):
-                    if tokens[j].type == 'newline':
-                        end_marker = j
-                        break
-
-                extend_classification_list(classifiers, idx, start_marker, end_marker, params2=params2)
-                idx -= 1
-                break
+            type_ = tokens[i0-1].text.lower()
+            extend_classification_list(classifiers, idx, i, j, params2=VBASectionClassifier(
+                type=type_,
+                private=(tokens[i].text.lower() == "private")
+            ))
+        except StopIteration:
+            break
 
     # Remove empty classifications
     idx = -1
@@ -343,71 +171,9 @@ def compile_code_into_sections(
 
 
 def compile_bas_sources_into_single_file(
-        sources: Dict[str, Union[str, List[VBAToken]]],
+        sources: Dict[Union[str, Path], Union[str, Path, List[VBAToken]]],
         module_name: Union[str, None] = None
 ) -> str:
-    r"""
-    Examples:
-        >>> sources = {
-        ... 'file_a': '''Attribute VB_Name = "MiscArray"
-        ...
-        ... Option Explicit
-        ...
-        ... ' Comment
-        ... Private Function Bla(arr As Variant)
-        ...     Bla = True
-        ... End Function
-        ... Private Function Bla2(arr As Variant)
-        ...     Bla2 = True
-        ... End Function
-        ... ''',
-        ... 'file_b': '''Attribute VB_Name = "aErrorEnums"
-        ... ' Comment
-        ...
-        ... Option Explicit
-        ...
-        ... Enum ErrNr
-        ...     Val1 = 3
-        ...     Val2 = 5
-        ... End Enum
-        ... ''',
-        ... 'file_c': '''Attribute VB_Name = "MiscAssign"
-        ...
-        ... Option Explicit
-        ...
-        ... #If VBA7 And Win64 Then
-        ...     Private Declare PtrSafe Function ShellExecuteA Lib "Shell32.dll" _
-        ...         (ByVal hwnd As Long, _
-        ...         ByVal lpOperation As String, _
-        ...         ByVal lpFile As String, _
-        ...        ByVal lpParameters As String, _
-        ...         ByVal lpDirectory As String, _
-        ...         ByVal nShowCmd As Long) As Long
-        ... #Else
-        ...
-        ...     Private Declare Function ShellExecuteA Lib "Shell32.dll" _
-        ...         (ByVal hwnd As Long, _
-        ...         ByVal lpOperation As String, _
-        ...         ByVal lpFile As String, _
-        ...         ByVal lpParameters As String, _
-        ...         ByVal lpDirectory As String, _
-        ...         ByVal nShowCmd As Long) As Long
-        ... #End If
-        ...
-        ... Private Function Bla3()
-        ...     Bla3 = True
-        ... End Function
-        ... '''
-        ... }
-        >>> _ = compile_bas_sources_into_single_file(sources)
-
-        >>> sources['file_b'] =  'Option Private' + '\n' + sources['file_b']
-        >>> _ = compile_bas_sources_into_single_file(sources) # doctest: +IGNORE_EXCEPTION_DETAIL
-        Traceback (most recent call last):
-        ValueError: Options must be equal across aggregated bas files, got conflict:
-         ...
-
-    """
 
     sources = {key: deepcopy(val) if isinstance(val, list) else tokenize(val) for key, val in sources.items()}
     names = {key: vba_module_name(tokens) for key, tokens in sources.items()}

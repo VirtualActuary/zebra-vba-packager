@@ -52,7 +52,6 @@ class NameTransformer:
         return x
 
 
-
 def write_tokens(fname, tokens):
     with fname.open("wb") as f:
         f.write(("".join([i.text for i in tokens]).lstrip()).encode("utf-8"))

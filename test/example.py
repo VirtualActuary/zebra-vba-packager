@@ -1,6 +1,6 @@
 import locate
-locate.force_relative_location_imports("..")
-from zebra_vba_packager.zebra_config import Source, Config
+with locate.prepend_sys_path(".."):
+    from zebra_vba_packager.zebra_config import Source, Config
 
 
 def pre_process(source):
@@ -21,7 +21,6 @@ def post_process(_):
 Config(
     Source(
         pre_process=pre_process,
-
         url_source="https://github.com/sdkn104/VBA-CSV/archive/refs/tags/v1.9.zip",
         glob_include=['**/*.bas', '**/*.cls'],
         glob_exclude=['**/*Example.bas', '**/*Test.bas'],

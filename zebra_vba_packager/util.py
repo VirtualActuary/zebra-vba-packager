@@ -1,9 +1,13 @@
 import hashlib
 import os
 import shutil
+import tempfile
 import time
 from pathlib import Path
 from typing import Iterable
+
+from .excel_compilation import is_locked
+from .py7z import pack
 
 
 def file_md5(fname: Path):
@@ -29,7 +33,18 @@ def to_dos_line_endings(s):
     return to_unix_line_endings(s).replace("\n", "\r\n")
 
 
-def backup_last_50_files(backup_dir, file):
+def backup_last_50_paths(backup_dir, path, check_lock=True):
+    path = Path(path)
+    if check_lock and is_locked(path):
+        raise RuntimeError(f"Path '{path}' cannot be overwritten.")
+
+    if path.is_dir():
+        # Backup the directory
+        with tempfile.TemporaryDirectory() as outdir:
+            if Path(path).is_dir():
+                pack(path, zipname := Path(outdir).joinpath(path.name + ".7z"))
+                return backup_last_50_paths(backup_dir, zipname, check_lock=check_lock)
+
     os.makedirs(backup_dir, exist_ok=True)
 
     keep = sorted(backup_dir.glob("*"))[-50:]
@@ -37,7 +52,5 @@ def backup_last_50_files(backup_dir, file):
         if i not in keep:
             os.remove(i)
 
-    try:
-        shutil.copy2(file, backup_dir.joinpath(f"{time.strftime('%Y-%m-%d--%H-%M-%S')}--{Path(file).name}"))
-    except:
-        pass
+    shutil.copy2(path, backup_dir.joinpath(f"{time.strftime('%Y-%m-%d--%H-%M-%S')}--{path.name}"))
+
