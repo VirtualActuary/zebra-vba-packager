@@ -1,9 +1,11 @@
 import os
 from copy import deepcopy
 from textwrap import dedent
+from types import SimpleNamespace
 from typing import List
 
-from .vba_tokenizer import tokenize, VBAToken
+from .match_tokens import match_tokens
+from .vba_tokenizer import tokenize, VBAToken, tokens_to_str
 from pathlib import Path
 
 
@@ -50,7 +52,6 @@ class NameTransformer:
                         else:
                             return j(x)
         return x
-
 
 
 def write_tokens(fname, tokens):
@@ -158,10 +159,31 @@ def bas_create_namespaced_classes(dirname):
 
     vba_dir_map = vba_directory_mapping(dirname)
 
-    d = {}
+
+    # Get the namespacing right
+    modnames = {}
+    names = {}
+    for filename, tokens in vba_dir_map.items():
+        if not str(filename).lower().endswith(".bas"):
+            continue
+
+        modnames[filename] = vba_module_name(tokens)
+        matches = match_tokens(tokens, "[public] [declare] property|sub|function|enum|const .*")
+        for i, j in matches:
+            names[tokens[j-1].text.lower()] = SimpleNamespace(
+                name=tokens[j-1].text,
+                filename=filename,
+                modname=modnames[filename],
+            )
+
+    for filename, tokens in vba_dir_map.items():
+        for token in tokens:
+            if token.type == "name" and (tname := names.get(token.text.lower(), False)) and tname.filename != filename:
+                token.text = f"{tname.modname}.{tname.name}"
+
     for filename, tokens in vba_dir_map.items():
         if str(filename).lower().endswith(".bas"):
-            modname = vba_module_name(tokens)
+            modname = modnames[filename]
 
             modname_new = f"z__{modname}__"
             modhead = tokenize(module_header.replace("__modulename__", modname_new))

@@ -115,8 +115,10 @@ def tokenize(txt) -> List[VBAToken]:
     ... #End If
     ... '''
 
+    >>> tokens = tokenize(vba_txt)
     >>> "".join([i.text for i in tokenize(vba_txt)]).replace("\r", "") == vba_txt
     True
+
     """
 
     tokens = []
@@ -240,6 +242,25 @@ def tokenize(txt) -> List[VBAToken]:
             tokens.pop(i+1)
             i = i-1
 
+    # Collect '#IF', '#ElseIf', '#Else', and '#End If' token names
+    i = -1
+    while (i := i+1) < len(tokens):
+        if (tokens[i].text == "#" and tokens[i].type == "unknown" and i+1 < len(tokens) and
+                tokens[i+1].type == "reserved" and tokens[i+1].text.lower() in ("if", "elseif", "else", "end")):
+            tokens[i].text = tokens[i].text + tokens[i+1].text
+            tokens[i].type = "#if"
+            tokens.pop(i+1)
+
+            if tokens[i].text.lower() == "#end":
+                if (i+1 < len(tokens) and tokens[i+1].type == 'space'
+                        and i+2 < len(tokens) and tokens[i+2].text.lower() == "if"):
+
+                    tokens[i].text = tokens[i].text + tokens[i+1].text + tokens[i+2].text
+                    tokens.pop(i + 1)
+                    tokens.pop(i + 1)
+                    i = i-2
+            i = i-1
+
     # Fix `Attribute VB_Name = "..."` to allow ... to be used as a name
     i = -1
     while (i := i+1) < len(tokens):
@@ -263,3 +284,8 @@ def tokenize(txt) -> List[VBAToken]:
                     break
 
     return tokens
+
+
+def tokens_to_str(tokens: List[VBAToken]) -> str:
+    return "".join([i.text for i in tokens])
+

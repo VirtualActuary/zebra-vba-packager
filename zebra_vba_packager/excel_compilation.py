@@ -1,3 +1,4 @@
+from typing import Union
 import locate
 from pathlib import Path
 import os
@@ -12,14 +13,14 @@ _runmacro_vbs = locate.this_dir().joinpath("bin", "runmacro.vbs")
 _saveasxlsx_vbs = locate.this_dir().joinpath("bin", "saveasxlsx.vbs")
 
 
-def is_locked(path):
+def is_locked(path) -> Union[bool, Exception]:
     if not Path(path).exists():
         return False
 
     path_moved = str(path) + ".testfilemovable000000"
     for i in range(1, 1000000):
         if os.path.exists(path_moved):
-            path_moved = path_moved[:-6] + "%06d"%i
+            path_moved = path_moved[:-6] + ("%06d" % i)
         else:
             break
 
