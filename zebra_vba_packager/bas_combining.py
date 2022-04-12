@@ -52,16 +52,17 @@ def get_private_names(tokens: List[VBAToken]):
     """
 
     return [
-        tokens[j-1].text for (i, j) in match_tokens(
+        tokens[j - 1].text
+        for (i, j) in match_tokens(
             tokens,
             "private [static] [declare] [ptrsafe] function|sub|parameter|enum|const .*",
-            on_line_start=True
-    )]
+            on_line_start=True,
+        )
+    ]
 
 
 def compile_code_into_sections(
-        input: Union[List[VBAToken], str],
-        origin: Union[str, None] = None
+    input: Union[List[VBAToken], str], origin: Union[str, None] = None
 ) -> List[VBASectionClassifier]:
     r"""
     Split VBA code into a few high-level catagories, such as `#if`, `function`, `option`, `declare`, and
@@ -71,24 +72,24 @@ def compile_code_into_sections(
     if not isinstance(tokens, list):
         tokens = tokenize(input)
 
-    classifiers = [
-        VBASectionClassifier(tokens, origin=origin)
-    ]
+    classifiers = [VBASectionClassifier(tokens, origin=origin)]
 
-    def extend_classification_list(classifiers, idx, start_marker, end_marker, params1=None, params2=None, params3=None):
+    def extend_classification_list(
+        classifiers,
+        idx,
+        start_marker,
+        end_marker,
+        params1=None,
+        params2=None,
+        params3=None,
+    ):
         tokens = classifiers[idx].tokens
 
         c1 = classifiers[idx]
         c1.tokens = tokens[:start_marker]
 
-        c2 = VBASectionClassifier(
-            tokens[start_marker:end_marker],
-            origin=c1.origin
-        )
-        c3 = VBASectionClassifier(
-            tokens[end_marker:],
-            origin=c1.origin
-        )
+        c2 = VBASectionClassifier(tokens[start_marker:end_marker], origin=c1.origin)
+        c3 = VBASectionClassifier(tokens[end_marker:], origin=c1.origin)
         for c, p in ((c1, params1), (c2, params2), (c3, params3)):
             if p is not None:
                 for attr in dir(p):
@@ -96,18 +97,17 @@ def compile_code_into_sections(
                         if getattr(p, attr) is not None:
                             setattr(c, attr, getattr(p, attr))
 
-        classifiers.insert(
-            idx + 1,
-            c2
-        )
-        classifiers.insert(
-            idx + 2,
-            c3
-        )
+        classifiers.insert(idx + 1, c2)
+        classifiers.insert(idx + 2, c3)
 
     def find_section(tokens, start_match_string, end_match_string):
         i, j = next(match_tokens(tokens, start_match_string, on_line_start=True))
-        k, l = [_ + j for _ in next(match_tokens(tokens[j:], end_match_string, on_line_start=True))]
+        k, l = [
+            _ + j
+            for _ in next(
+                match_tokens(tokens[j:], end_match_string, on_line_start=True)
+            )
+        ]
         return i, l
 
     # If seperation
@@ -119,7 +119,9 @@ def compile_code_into_sections(
         tokens = classifiers[idx].tokens
         try:
             i, j = find_section(tokens, "#if", "#end\s*if")
-            extend_classification_list(classifiers, idx, i, j, params2=VBASectionClassifier(type="#if"))
+            extend_classification_list(
+                classifiers, idx, i, j, params2=VBASectionClassifier(type="#if")
+            )
             idx = idx - 1
         except StopIteration:
             break
@@ -133,9 +135,11 @@ def compile_code_into_sections(
         try:
             pre = "[private|public] property|sub|function|enum"
             i, j = find_section(tokens, pre, r"end property|sub|function|enum")
-            type_ = tokens[j-1].text.lower()
+            type_ = tokens[j - 1].text.lower()
             type_ = "function" if type_ in ("sub", "property") else type_
-            extend_classification_list(classifiers, idx, i, j, params2=VBASectionClassifier(type=type_))
+            extend_classification_list(
+                classifiers, idx, i, j, params2=VBASectionClassifier(type=type_)
+            )
         except StopIteration:
             break
 
@@ -146,23 +150,34 @@ def compile_code_into_sections(
             continue
         tokens = classifiers[idx].tokens
         try:
-            i, i0 = next(match_tokens(tokens, "[private|public] declare|option|attribute", on_line_start=True))
+            i, i0 = next(
+                match_tokens(
+                    tokens,
+                    "[private|public] declare|option|attribute",
+                    on_line_start=True,
+                )
+            )
             try:
                 _, j = [x + i0 for x in next(match_tokens(tokens[i0:], r"\r\n"))]
             except StopIteration:
                 j = len(tokens)
 
-            type_ = tokens[i0-1].text.lower()
-            extend_classification_list(classifiers, idx, i, j, params2=VBASectionClassifier(
-                type=type_,
-                private=(tokens[i].text.lower() == "private")
-            ))
+            type_ = tokens[i0 - 1].text.lower()
+            extend_classification_list(
+                classifiers,
+                idx,
+                i,
+                j,
+                params2=VBASectionClassifier(
+                    type=type_, private=(tokens[i].text.lower() == "private")
+                ),
+            )
         except StopIteration:
             break
 
     # Remove empty classifications
     idx = -1
-    while(idx := idx+1) < len(classifiers):
+    while (idx := idx + 1) < len(classifiers):
         if not len(classifiers[idx].tokens):
             classifiers.pop(idx)
             idx -= 1
@@ -171,11 +186,14 @@ def compile_code_into_sections(
 
 
 def compile_bas_sources_into_single_file(
-        sources: Dict[Union[str, Path], Union[str, Path, List[VBAToken]]],
-        module_name: Union[str, None] = None
+    sources: Dict[Union[str, Path], Union[str, Path, List[VBAToken]]],
+    module_name: Union[str, None] = None,
 ) -> str:
 
-    sources = {key: deepcopy(val) if isinstance(val, list) else tokenize(val) for key, val in sources.items()}
+    sources = {
+        key: deepcopy(val) if isinstance(val, list) else tokenize(val)
+        for key, val in sources.items()
+    }
     names = {key: vba_module_name(tokens) for key, tokens in sources.items()}
 
     # Replace private functions and consts etc. with guarded named versions of themselves
@@ -195,9 +213,9 @@ def compile_bas_sources_into_single_file(
     # Get the first entry in #if statement and rather use that as an proxy classification for the whole block
     for classifiers in classifiers_sources.values():
         for c in classifiers:
-            if c.type == '#if':
+            if c.type == "#if":
                 for i in compile_code_into_sections(c.tokens[3:]):
-                    if i.type != 'unknown':
+                    if i.type != "unknown":
                         c.type = i.type
                         break
 
@@ -206,8 +224,14 @@ def compile_bas_sources_into_single_file(
 
     for classifiers in classifiers_sources.values():
         for c in classifiers:
-            if c.type == 'option':
-                normcode = " ".join([i.text.lower().strip() for i in c.tokens if not i.type in ('space', 'comment')])
+            if c.type == "option":
+                normcode = " ".join(
+                    [
+                        i.text.lower().strip()
+                        for i in c.tokens
+                        if not i.type in ("space", "comment")
+                    ]
+                )
                 option_statements[c.origin].append(normcode)
 
     for key in option_statements:
@@ -219,47 +243,55 @@ def compile_bas_sources_into_single_file(
             key_a = key
         else:
             if option_statements[key_a] != option_statements[key]:
-                ln = '\n'
-                lhs = indent(f'{key_a}:\n{indent(ln.join(option_statements[key_a]), "  ")}', "  ")
-                rhs = indent(f'{key}:\n{indent(ln.join(option_statements[key]), "  ")}', "  ")
-                raise ValueError(f"Options must be equal across aggregated bas files, got conflict:\n{lhs}\n{rhs}")
+                ln = "\n"
+                lhs = indent(
+                    f'{key_a}:\n{indent(ln.join(option_statements[key_a]), "  ")}', "  "
+                )
+                rhs = indent(
+                    f'{key}:\n{indent(ln.join(option_statements[key]), "  ")}', "  "
+                )
+                raise ValueError(
+                    f"Options must be equal across aggregated bas files, got conflict:\n{lhs}\n{rhs}"
+                )
 
     # Merge classifiers with `unknown` at their top
     for classifiers in classifiers_sources.values():
         idx = -1
-        while(idx := idx+1) < len(classifiers):
-            if classifiers[idx].type == 'unknown':
+        while (idx := idx + 1) < len(classifiers):
+            if classifiers[idx].type == "unknown":
                 for j in range(idx + 1, len(classifiers)):
 
-                    classifiers[idx+1].tokens = classifiers[idx].tokens + classifiers[idx+1].tokens
+                    classifiers[idx + 1].tokens = (
+                        classifiers[idx].tokens + classifiers[idx + 1].tokens
+                    )
                     classifiers.pop(idx)
-                    if classifiers[idx].type != 'unknown':
+                    if classifiers[idx].type != "unknown":
                         break
 
     classifiers = reduce(operator.concat, classifiers_sources.values())
 
     buckets = {
-        'attribute': [],
-        'option': [],
-        'declare': [],
-        'other': [],
-        'function': []
+        "attribute": [],
+        "option": [],
+        "declare": [],
+        "other": [],
+        "function": [],
     }
 
     for c in classifiers:
         # Only use one of the file's declare statements
-        if c.type == 'option':
+        if c.type == "option":
             if c.origin == first(classifiers_sources):
                 buckets[c.type].append(c)
         elif c.type in buckets:
             buckets[c.type].append(c)
         else:
-            buckets['other'].append(c)
+            buckets["other"].append(c)
 
     code = []
     origin = None
     for key, vals in buckets.items():
-        if key == 'attribute':
+        if key == "attribute":
             continue
 
         for i in vals:
@@ -267,7 +299,7 @@ def compile_bas_sources_into_single_file(
             block_str = to_unix_line_endings(tokens_to_str(i.tokens)).strip()
             if block_str != "":
                 block_str = block_str + "\n\n"
-                if i.type != 'option':
+                if i.type != "option":
                     if i.origin != origin:
                         code.append(f"'*************** {names[i.origin]}\n")
                         origin = i.origin
@@ -280,4 +312,3 @@ def compile_bas_sources_into_single_file(
     code.insert(0, f'Attribute VB_Name = "{module_name}"\n')
 
     return to_dos_line_endings("".join(code))
-
