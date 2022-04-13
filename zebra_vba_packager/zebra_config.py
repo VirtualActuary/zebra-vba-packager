@@ -31,7 +31,7 @@ def strhash(x):
 
 
 def caller_path(frame_info: inspect.FrameInfo):
-    if path := frame_info.frame.f_globals.get("__file__", None) is not None:
+    if (path := frame_info.frame.f_globals.get("__file__", None)) is not None:
         return Path(os.path.abspath(path)).resolve()
 
 
