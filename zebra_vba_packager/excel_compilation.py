@@ -65,6 +65,16 @@ def compile_xl(src_dir, dst_file=None):
                 xlname = next(src_dir_tmp.glob("*.xlsx"))
             os.rename(xlname, xlrename)
 
+        # Ensure all .txt, .bas and .cls files have 'lrln' line endings
+        for patt in ["*.txt", "*.bas", "*.cls"]:
+            for f in Path(src_dir_tmp).rglob(patt):
+                with f.open("rb") as fr:
+                    txt = fr.read()
+                with f.open("wb") as fw:
+                    fw.write(
+                        txt.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+                    )
+
         subprocess.check_output(["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)])
 
         dst_file_tmp = next(Path(tmpdirname).glob("*.xlsb"))
