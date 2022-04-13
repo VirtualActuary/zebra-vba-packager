@@ -58,8 +58,8 @@ def git_download(git_source, dest, revision=None):
         def is_on_ref(revision):
             if revision is None:
                 return False
-            commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
             try:
+                commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
                 return commit == sh_lines([git, "rev-list", "-n", "1", revision], stderr=subprocess.DEVNULL)[0]
             except subprocess.CalledProcessError:
                 return False
@@ -74,7 +74,7 @@ def git_download(git_source, dest, revision=None):
         with suppress(subprocess.CalledProcessError):
             gitremote = sh_lines([git, 'config', '--get', 'remote.origin.url'])[0]
 
-        # If already correct git source, don't re-download
+        # If not correct git source, then re-download
         if gitremote != git_source:
             for i in Path(".").glob("*"):
                 if i.is_file():
@@ -83,7 +83,7 @@ def git_download(git_source, dest, revision=None):
                     shutil.rmtree(i)
 
             subprocess.call([git, "clone", git_source, str(Path(".").resolve())])
-            if not Path("./.git").is_dir():
+            if not Path(".git").is_dir():
                 raise(RuntimeError(f"Could not `git clone {git_source} .`"))
 
         sh_quiet([git, "reset", "--hard"])
