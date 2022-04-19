@@ -1,4 +1,4 @@
-Attribute VB_Name = "ScenarioTemplateRun"
+Attribute VB_Name = "ScenarioTemplateGenerationRun"
 Option Explicit
 
 Sub runScenariosFromTable(mainTableName As String)

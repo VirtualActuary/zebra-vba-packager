@@ -36,7 +36,7 @@ def to_dos_line_endings(s):
 def backup_last_50_paths(backup_dir, path, check_lock=True):
     path = Path(path)
     if check_lock and is_locked(path):
-        raise RuntimeError(f"Path '{path}' cannot be overwritten.")
+        raise RuntimeError(f"Path '{path}' is locked and cannot be overwritten.")
 
     if path.is_dir():
         # Backup the directory

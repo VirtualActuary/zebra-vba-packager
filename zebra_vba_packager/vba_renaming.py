@@ -185,7 +185,7 @@ def bas_create_namespaced_classes(dirname):
         if str(filename).lower().endswith(".bas"):
             modname = modnames[filename]
 
-            modname_new = f"z__{modname}__"
+            modname_new = f"z__{modname}"
             modhead = tokenize(module_header.replace("__modulename__", modname_new))
             tokens = modhead + strip_bas_header(tokens)
 
