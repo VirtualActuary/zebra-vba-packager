@@ -5,7 +5,6 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Iterable
-
 from .excel_compilation import is_locked
 from .py7z import pack
 
@@ -42,7 +41,7 @@ def backup_last_50_paths(backup_dir, path, check_lock=True):
         # Backup the directory
         with tempfile.TemporaryDirectory() as outdir:
             if Path(path).is_dir():
-                pack(path, zipname := Path(outdir).joinpath(path.name + ".7z"))
+                pack(path, zipname := Path(outdir).joinpath(path.name + ".zip"))
                 return backup_last_50_paths(backup_dir, zipname, check_lock=check_lock)
 
     os.makedirs(backup_dir, exist_ok=True)
