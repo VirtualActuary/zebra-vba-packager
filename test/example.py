@@ -1,4 +1,5 @@
 import locate
+
 with locate.prepend_sys_path(".."):
     from zebra_vba_packager.zebra_config import Source, Config
 
@@ -22,18 +23,17 @@ Config(
     Source(
         pre_process=pre_process,
         url_source="https://github.com/sdkn104/VBA-CSV/archive/refs/tags/v1.9.zip",
-        glob_include=['**/*.bas', '**/*.cls'],
-        glob_exclude=['**/*Example.bas', '**/*Test.bas'],
+        glob_include=["**/*.bas", "**/*.cls"],
+        glob_exclude=["**/*Example.bas", "**/*Test.bas"],
         combine_bas_files="Example",
-
         mid_process=mid_process,
-        post_process=post_process
+        post_process=post_process,
     ),
     Source(
         git_source="https://github.com/ws-garcia/VBA-CSV-interface.git",
         git_rev="795e583701efece8d14d2f16693ad1673fabe042",
-        glob_include=['**/*.bas', '**/*.cls'],
-        glob_exclude=['**/Tests/'],
-        mid_process=mid_process
-    )
+        glob_include=["**/*.bas", "**/*.cls"],
+        glob_exclude=["**/Tests/"],
+        mid_process=mid_process,
+    ),
 ).run()

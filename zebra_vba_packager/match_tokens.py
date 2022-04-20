@@ -10,10 +10,7 @@ def _str_to_matchables(s):
     matchlist = [i.strip() for i in s.split(" ")]
     matchobj = []
     for i in matchlist:
-        obj = SN(
-            optional=False,
-            re=i
-        )
+        obj = SN(optional=False, re=i)
         if f"{i[:1]}{i[-1:]}" == "[]":  # optional
             obj.optional = True
             obj.re = i[1:-1]
@@ -24,7 +21,9 @@ def _str_to_matchables(s):
     return matchobj
 
 
-def match_tokens(tokens: List[VBAToken], custom_token_match_string, on_line_start=False):
+def match_tokens(
+    tokens: List[VBAToken], custom_token_match_string, on_line_start=False
+):
     matchables = _str_to_matchables(custom_token_match_string)
 
     # Pretend that tokens[-1] is a newline
@@ -38,18 +37,18 @@ def match_tokens(tokens: List[VBAToken], custom_token_match_string, on_line_star
     else:
         i = -1
 
-    while (i := i+1) < len(tokens):
+    while (i := i + 1) < len(tokens):
         if token_at(i).type == "space":
             continue
 
         matched = 1  # 1 = ongoing
         k = -1
         j = i - 1
-        while (j := j+1) < len(tokens) and k < len(matchables):
+        while (j := j + 1) < len(tokens) and k < len(matchables):
             if token_at(j).type == "space":
                 continue
 
-            while (k := k+1) < len(matchables):
+            while (k := k + 1) < len(matchables):
 
                 if matchables[k].re.match(token_at(j).text):
                     if k == len(matchables) - 1:
@@ -70,11 +69,12 @@ def match_tokens(tokens: List[VBAToken], custom_token_match_string, on_line_star
             while on_line_start and tokens[(ii := ii + 1)].type == "space":
                 pass
 
-            yield ii, j+1
+            yield ii, j + 1
 
 
 if __name__ == "__main__":
-    txt_in = dedent("""
+    txt_in = dedent(
+        """
         Attribute VB_Name = "MiscArray"
         Option Explicit
         
@@ -124,4 +124,8 @@ if __name__ == "__main__":
     (i, j) = next(match_tokens(tokens, "#if", on_line_start=True))
 
     print(tokenize("hello\n  #end if"))
-    print(list(match_tokens(tokenize("hello\n  #end if"), "#end.*if", on_line_start=False)))
+    print(
+        list(
+            match_tokens(tokenize("hello\n  #end if"), "#end.*if", on_line_start=False)
+        )
+    )

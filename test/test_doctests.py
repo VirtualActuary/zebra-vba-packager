@@ -21,8 +21,8 @@ def load_tests(loader, tests, ignore):
 def find_modules_with_doctests():
     modules = []
     skip_n_parts = len(repo_dir.parts)
-    for path in repo_dir.joinpath('zebra_vba_packager').rglob('*.py'):
-        if path.name == '__init__.py':
+    for path in repo_dir.joinpath("zebra_vba_packager").rglob("*.py"):
+        if path.name == "__init__.py":
             continue
 
         module = ".".join(path.parts[skip_n_parts:])
@@ -31,7 +31,7 @@ def find_modules_with_doctests():
     return modules
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main(
         failfast=True,
     )

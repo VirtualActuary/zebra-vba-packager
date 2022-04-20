@@ -29,17 +29,22 @@ def working_directory(path):
 
 def sh_lines(command, **kwargs):
     shell = isinstance(command, str)
-    lst = subprocess.check_output(command,
-                                  shell=isinstance(command, str),
-                                  **kwargs).decode("utf-8").strip().split("\n")
-    return [] if lst == [''] else [i.strip() for i in lst]
+    lst = (
+        subprocess.check_output(command, shell=isinstance(command, str), **kwargs)
+        .decode("utf-8")
+        .strip()
+        .split("\n")
+    )
+    return [] if lst == [""] else [i.strip() for i in lst]
 
 
 def sh_quiet(command):
-    return subprocess.call(command,
-                           shell=isinstance(command, str),
-                           stderr=subprocess.DEVNULL,
-                           stdout=subprocess.DEVNULL)
+    return subprocess.call(
+        command,
+        shell=isinstance(command, str),
+        stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+    )
 
 
 def git_download(git_source, dest, revision=None):
@@ -50,17 +55,23 @@ def git_download(git_source, dest, revision=None):
             raise (RuntimeError(f"Could not create and enter {dest}"))
 
         try:
-            git = str(Path(sh_lines('where git')[0]).resolve())
+            git = str(Path(sh_lines("where git")[0]).resolve())
         except (subprocess.CalledProcessError, IndexError) as e:
-            raise(RuntimeError("Could not find git through `where git`"))
+            raise (RuntimeError("Could not find git through `where git`"))
 
         # Test if we are currently tracking the ref
         def is_on_ref(revision):
             if revision is None:
                 return False
             try:
-                commit = sh_lines([git, 'rev-parse', 'HEAD'])[0]
-                return commit == sh_lines([git, "rev-list", "-n", "1", revision], stderr=subprocess.DEVNULL)[0]
+                commit = sh_lines([git, "rev-parse", "HEAD"])[0]
+                return (
+                    commit
+                    == sh_lines(
+                        [git, "rev-list", "-n", "1", revision],
+                        stderr=subprocess.DEVNULL,
+                    )[0]
+                )
             except subprocess.CalledProcessError:
                 return False
 
@@ -70,9 +81,9 @@ def git_download(git_source, dest, revision=None):
                 sh_quiet([git, "clean", "-qdfx"])
                 return None
 
-        gitremote = None # noqa
+        gitremote = None  # noqa
         with suppress(subprocess.CalledProcessError):
-            gitremote = sh_lines([git, 'config', '--get', 'remote.origin.url'])[0]
+            gitremote = sh_lines([git, "config", "--get", "remote.origin.url"])[0]
 
         # If not correct git source, then re-download
         if gitremote != git_source:
@@ -84,7 +95,7 @@ def git_download(git_source, dest, revision=None):
 
             subprocess.call([git, "clone", git_source, str(Path(".").resolve())])
             if not Path(".git").is_dir():
-                raise(RuntimeError(f"Could not `git clone {git_source} .`"))
+                raise (RuntimeError(f"Could not `git clone {git_source} .`"))
 
         sh_quiet([git, "reset", "--hard"])
         sh_quiet([git, "clean", "-qdfx"])
@@ -96,12 +107,14 @@ def git_download(git_source, dest, revision=None):
                         continue
                     sh_quiet([git, "branch", "--track", branch.split("/")[-1], branch])
 
-            sh_quiet([git, "fetch",  "--all"])
+            sh_quiet([git, "fetch", "--all"])
             sh_quiet([git, "fetch", "--tags", "--force"])
 
             # set revision to default branch
             if revision is None:
-                revision = sh_lines([git, "symbolic-ref", "refs/remotes/origin/HEAD"])[0].split("/")[-1]
+                revision = sh_lines([git, "symbolic-ref", "refs/remotes/origin/HEAD"])[
+                    0
+                ].split("/")[-1]
 
             sh_quiet([git, "pull", "origin", revision])
             sh_quiet([git, "checkout", "--force", revision])

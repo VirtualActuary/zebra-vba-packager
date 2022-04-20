@@ -51,5 +51,6 @@ def backup_last_50_paths(backup_dir, path, check_lock=True):
         if i not in keep:
             os.remove(i)
 
-    shutil.copy2(path, backup_dir.joinpath(f"{time.strftime('%Y-%m-%d--%H-%M-%S')}--{path.name}"))
-
+    shutil.copy2(
+        path, backup_dir.joinpath(f"{time.strftime('%Y-%m-%d--%H-%M-%S')}--{path.name}")
+    )

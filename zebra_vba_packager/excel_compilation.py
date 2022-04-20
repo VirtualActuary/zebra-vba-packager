@@ -42,7 +42,7 @@ def compile_xl(src_dir, dst_file=None):
     WindowsPath('...example-xl-with-vba-and-rename.xlsb')
     """
     if dst_file is None:
-        dst_file = str(src_dir)+".xlsb"
+        dst_file = str(src_dir) + ".xlsb"
 
     src_dir = Path(src_dir)
     dst_file = Path(dst_file)
@@ -58,8 +58,8 @@ def compile_xl(src_dir, dst_file=None):
         shutil.copytree(src_dir, src_dir_tmp)
 
         # Adhere to the compile.vbs strict naming convention
-        xlname = src_dir_tmp.joinpath(src_dir.name+".xlsx")
-        xlrename = src_dir_tmp.joinpath(src_dir_tmp.name+".xlsx")
+        xlname = src_dir_tmp.joinpath(src_dir.name + ".xlsx")
+        xlrename = src_dir_tmp.joinpath(src_dir_tmp.name + ".xlsx")
         if not xlrename.is_file():
             if not xlname.is_file():
                 xlname = next(src_dir_tmp.glob("*.xlsx"))
@@ -71,11 +71,11 @@ def compile_xl(src_dir, dst_file=None):
                 with f.open("rb") as fr:
                     txt = fr.read()
                 with f.open("wb") as fw:
-                    fw.write(
-                        txt.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
-                    )
+                    fw.write(txt.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
 
-        subprocess.check_output(["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)])
+        subprocess.check_output(
+            ["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)]
+        )
 
         dst_file_tmp = next(Path(tmpdirname).glob("*.xlsb"))
 
@@ -110,11 +110,13 @@ def decompile_xl(src_file, dst_dir=None):
         src_file_tmp = Path(tmpdirname).joinpath(src_file.name)
         shutil.copy2(src_file, src_file_tmp)
 
-        subprocess.check_output(["cscript", "//nologo", str(_decompile_vbs), str(src_file_tmp)])
+        subprocess.check_output(
+            ["cscript", "//nologo", str(_decompile_vbs), str(src_file_tmp)]
+        )
 
         dst_dir_tmp = [i for i in Path(tmpdirname).glob("*") if i.is_dir()][0]
         xl_tmp = next(dst_dir_tmp.rglob("*.xlsx"))
-        os.rename(xl_tmp, xl_tmp.parent.joinpath(dst_name+".xlsx"))
+        os.rename(xl_tmp, xl_tmp.parent.joinpath(dst_name + ".xlsx"))
 
         shutil.rmtree(dst_dir, ignore_errors=True)
         os.makedirs(dst_dir, exist_ok=True)
@@ -126,7 +128,9 @@ def decompile_xl(src_file, dst_dir=None):
 def runmacro_xl(src_file, macroname=None):
     src_file = Path(src_file).resolve()
     macroarg = [macroname] if not macroname is None else []
-    subprocess.check_output(["cscript", "//nologo", str(_runmacro_vbs), str(src_file)]+macroarg)
+    subprocess.check_output(
+        ["cscript", "//nologo", str(_runmacro_vbs), str(src_file)] + macroarg
+    )
 
 
 def saveas_xlsx(src_file, dst_file):
@@ -144,11 +148,19 @@ def saveas_xlsx(src_file, dst_file):
 
     with tempfile.TemporaryDirectory() as src_d:
         with tempfile.TemporaryDirectory() as dst_d:
-            src_tmp = Path(src_d).joinpath(uuid.uuid4().hex+"-"+src_file.name)
-            dst_tmp = Path(src_d).joinpath(uuid.uuid4().hex+"-"+dst_file.name)
+            src_tmp = Path(src_d).joinpath(uuid.uuid4().hex + "-" + src_file.name)
+            dst_tmp = Path(src_d).joinpath(uuid.uuid4().hex + "-" + dst_file.name)
 
             shutil.copy2(src_file, src_tmp)
-            subprocess.check_output(["cscript", "//nologo", str(_saveasxlsx_vbs), str(src_tmp), str(dst_tmp)])
+            subprocess.check_output(
+                [
+                    "cscript",
+                    "//nologo",
+                    str(_saveasxlsx_vbs),
+                    str(src_tmp),
+                    str(dst_tmp),
+                ]
+            )
 
             if not dst_tmp.exists():
                 raise RuntimeError(f"Could not save `{src_file}` as `{dst_file}`")

@@ -10,7 +10,6 @@ from pathlib import Path
 
 
 class NameTransformer:
-
     def __init__(self, name_changes):
         # force lowercase matching
         if isinstance(name_changes, dict):
@@ -62,7 +61,7 @@ def write_tokens(fname, tokens):
 def vba_directory_mapping(dirname):
 
     files_to_tokens = {}
-    for i in list(Path(dirname).rglob("*.bas"))+list(Path(dirname).rglob("*.cls")):
+    for i in list(Path(dirname).rglob("*.bas")) + list(Path(dirname).rglob("*.cls")):
         with i.open("r") as f:
             files_to_tokens[i] = tokenize(f.read())
 
@@ -72,11 +71,11 @@ def vba_directory_mapping(dirname):
 def vba_module_name(tokens: List[VBAToken]):
     # search for pattern [reserved=Attribute, wspace, reserved=VB_Name, ??, ??, ??, name=ECPTextStream]
     i = -1
-    while (i := i+1) < len(tokens):
+    while (i := i + 1) < len(tokens):
         t = tokens[i]
-        if(t.type == "reserved" and t.text.lower() == "attribute"):
+        if t.type == "reserved" and t.text.lower() == "attribute":
             j = i
-            while (j := j+1) < len(tokens)-1 and tokens[j].type != "newline":
+            while (j := j + 1) < len(tokens) - 1 and tokens[j].type != "newline":
                 pass
 
             subtokens = tokens[i:j]
@@ -145,7 +144,8 @@ def strip_bas_header(tokens):
 
 
 def bas_create_namespaced_classes(dirname):
-    module_header = dedent("""
+    module_header = dedent(
+        """
     VERSION 1.0 CLASS
     BEGIN
       MultiUse = -1  'True
@@ -155,10 +155,10 @@ def bas_create_namespaced_classes(dirname):
     Attribute VB_Creatable = False
     Attribute VB_PredeclaredId = False
     Attribute VB_Exposed = True
-    """).lstrip()
+    """
+    ).lstrip()
 
     vba_dir_map = vba_directory_mapping(dirname)
-
 
     # Get the namespacing right
     modnames = {}
@@ -168,17 +168,23 @@ def bas_create_namespaced_classes(dirname):
             continue
 
         modnames[filename] = vba_module_name(tokens)
-        matches = match_tokens(tokens, "[public] [declare] property|sub|function|enum|const .*")
+        matches = match_tokens(
+            tokens, "[public] [declare] property|sub|function|enum|const .*"
+        )
         for i, j in matches:
-            names[tokens[j-1].text.lower()] = SimpleNamespace(
-                name=tokens[j-1].text,
+            names[tokens[j - 1].text.lower()] = SimpleNamespace(
+                name=tokens[j - 1].text,
                 filename=filename,
                 modname=modnames[filename],
             )
 
     for filename, tokens in vba_dir_map.items():
         for token in tokens:
-            if token.type == "name" and (tname := names.get(token.text.lower(), False)) and tname.filename != filename:
+            if (
+                token.type == "name"
+                and (tname := names.get(token.text.lower(), False))
+                and tname.filename != filename
+            ):
                 token.text = f"{tname.modname}.{tname.name}"
 
     for filename, tokens in vba_dir_map.items():
@@ -190,5 +196,5 @@ def bas_create_namespaced_classes(dirname):
             tokens = modhead + strip_bas_header(tokens)
 
             os.remove(filename)
-            newpath = filename.parent.joinpath(modname_new+".cls")
+            newpath = filename.parent.joinpath(modname_new + ".cls")
             write_tokens(newpath, tokens)

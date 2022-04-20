@@ -4,10 +4,12 @@ from functools import reduce
 import operator
 from typing import List
 
+
 @dataclass
 class VBAToken:
     text: str
-    type: str #"name" "unknown"
+    type: str  # "name" "unknown"
+
 
 # from openpyxl/formula/tokenizer.py
 # Inside a string, all characters are treated as literals, except for
@@ -85,7 +87,7 @@ def fill_space(s, i, j):
 def idx_splitting(idxes, length):
     flat_idxes = [outer for inner in idxes for outer in inner]
     rets = []
-    for cnt, (i, j) in enumerate(zip([0]+flat_idxes, flat_idxes+[length])):
+    for cnt, (i, j) in enumerate(zip([0] + flat_idxes, flat_idxes + [length])):
         rets.append(((i, j), cnt % 2 != 0))
 
     return rets
@@ -129,39 +131,46 @@ def tokenize(txt) -> List[VBAToken]:
 
         # Find string candidates
         for (i, j), is_str in idx_splitting(re_idx(strre, line), len(line)):
-            line_tokens.append(VBAToken(text=line[i:j],
-                                        type=("string" if is_str else "unknown")))
+            line_tokens.append(
+                VBAToken(text=line[i:j], type=("string" if is_str else "unknown"))
+            )
 
         # Find comment candidates (and retrofix "strings" within comments)
         for i in range(len(line_tokens)):
             if line_tokens[i].type == "unknown":
                 ttxt = line_tokens[i].text
-        
+
                 # Find rem-type comment
-                if (remidx := re_idx(remcommentsolre, ttxt)) and len(remidx) == 1 and remidx[0][0] == [0]:
+                if (
+                    (remidx := re_idx(remcommentsolre, ttxt))
+                    and len(remidx) == 1
+                    and remidx[0][0] == [0]
+                ):
                     remidx = remidx
                 elif (remidx := re_idx(remcommentre, ttxt)) and len(remidx) == 1:
                     remidx = remidx
                 else:
                     remidx = None
-        
+
                 # ren-type comments
                 if remidx is not None:
                     il, jl = 0, remidx[0][0]
                     ir, jr = remidx[0][0], len(ttxt)
 
-                    lhs = ttxt[il: jl]
-                    rhs = ttxt[ir: jr] + "".join([i.text for i in line_tokens[i+1:]])
-        
+                    lhs = ttxt[il:jl]
+                    rhs = ttxt[ir:jr] + "".join([i.text for i in line_tokens[i + 1 :]])
+
                     line_tokens = line_tokens[:i]
                     line_tokens.append(VBAToken(text=lhs, type="unknown"))
                     line_tokens.append(VBAToken(text=rhs, type="comment"))
                     break
-        
+
                 # '-type comments
                 elif "'" in ttxt:
-                    lhs = ttxt[:ttxt.find("'")]
-                    rhs = ttxt[ttxt.find("'"):] + "".join([i.text for i in line_tokens[i+1:]])
+                    lhs = ttxt[: ttxt.find("'")]
+                    rhs = ttxt[ttxt.find("'") :] + "".join(
+                        [i.text for i in line_tokens[i + 1 :]]
+                    )
 
                     line_tokens = line_tokens[:i]
                     line_tokens.append(VBAToken(text=lhs, type="unknown"))
@@ -170,7 +179,7 @@ def tokenize(txt) -> List[VBAToken]:
 
         # find names and (reserved keywords)
         i = -1
-        while (i := i+1) < len(line_tokens):
+        while (i := i + 1) < len(line_tokens):
             if line_tokens[i].type == "unknown":
                 t = line_tokens.pop(i)
                 j = -1
@@ -185,32 +194,34 @@ def tokenize(txt) -> List[VBAToken]:
                     else:
                         ttype = "unknown"
 
-                    line_tokens.insert(
-                        i+j,
-                        VBAToken(text=ttxt,
-                                 type=ttype)
-                    )
-                i = i+j
+                    line_tokens.insert(i + j, VBAToken(text=ttxt, type=ttype))
+                i = i + j
 
         tokens.extend(line_tokens)
-        tokens.append(VBAToken(text="\r\n",  type="newline"))
-    tokens = tokens[:-1] # remove last newline
+        tokens.append(VBAToken(text="\r\n", type="newline"))
+    tokens = tokens[:-1]  # remove last newline
 
     # Whitespace tokens
     i = -1
-    while (i := i+1) < len(tokens):
+    while (i := i + 1) < len(tokens):
         if tokens[i].type == "unknown":
             t = tokens.pop(i)
             j = -1
-            for (ii, jj), is_wspace in idx_splitting(re_idx(wspacere, t.text), length=len(t.text)):
+            for (ii, jj), is_wspace in idx_splitting(
+                re_idx(wspacere, t.text), length=len(t.text)
+            ):
                 j += 1
-                tokens.insert(i+j, VBAToken(text=t.text[ii:jj],
-                                            type="space" if is_wspace else "unknown"))
-            i = i+j
+                tokens.insert(
+                    i + j,
+                    VBAToken(
+                        text=t.text[ii:jj], type="space" if is_wspace else "unknown"
+                    ),
+                )
+            i = i + j
 
     # Line continuation
     i = -1
-    while (i := i+1) < len(tokens):
+    while (i := i + 1) < len(tokens):
         if tokens[i].type == "unknown":
             if tokens[i].text.endswith("_"):
                 j = i
@@ -218,63 +229,82 @@ def tokenize(txt) -> List[VBAToken]:
                     if tokens[j].type == "newline":
                         break
 
-                if prod([i.type == "space" for i in tokens[i+1:j-1]]):
+                if prod([i.type == "space" for i in tokens[i + 1 : j - 1]]):
                     t = tokens.pop(i)
-                    tokens.insert(i, VBAToken(text=t.text.rsplit("_", 1)[0],
-                                              type=t.type))
+                    tokens.insert(
+                        i, VBAToken(text=t.text.rsplit("_", 1)[0], type=t.type)
+                    )
 
-                    ttxt = "_"+t.text.rsplit("_", 1)[1]
-                    for t in tokens[i+1:j+1]:
-                        tokens.pop(i+1)
+                    ttxt = "_" + t.text.rsplit("_", 1)[1]
+                    for t in tokens[i + 1 : j + 1]:
+                        tokens.pop(i + 1)
                         ttxt = ttxt + t.text
 
-                    tokens.insert(i+1, VBAToken(text=ttxt,
-                                                type="space"))
+                    tokens.insert(i + 1, VBAToken(text=ttxt, type="space"))
 
     # Filter out empty tokens
     tokens = [i for i in tokens if i.text != ""]
 
     # Merge spaces together
     i = -1
-    while (i := i+1) < len(tokens):
-        if tokens[i].type == "space" and i+1 < len(tokens) and tokens[i+1].type == "space":
-            tokens[i].text = tokens[i].text + tokens[i+1].text
-            tokens.pop(i+1)
-            i = i-1
+    while (i := i + 1) < len(tokens):
+        if (
+            tokens[i].type == "space"
+            and i + 1 < len(tokens)
+            and tokens[i + 1].type == "space"
+        ):
+            tokens[i].text = tokens[i].text + tokens[i + 1].text
+            tokens.pop(i + 1)
+            i = i - 1
 
     # Collect '#IF', '#ElseIf', '#Else', and '#End If' token names
     i = -1
-    while (i := i+1) < len(tokens):
-        if (tokens[i].text == "#" and tokens[i].type == "unknown" and i+1 < len(tokens) and
-                tokens[i+1].type == "reserved" and tokens[i+1].text.lower() in ("if", "elseif", "else", "end")):
-            tokens[i].text = tokens[i].text + tokens[i+1].text
+    while (i := i + 1) < len(tokens):
+        if (
+            tokens[i].text == "#"
+            and tokens[i].type == "unknown"
+            and i + 1 < len(tokens)
+            and tokens[i + 1].type == "reserved"
+            and tokens[i + 1].text.lower() in ("if", "elseif", "else", "end")
+        ):
+            tokens[i].text = tokens[i].text + tokens[i + 1].text
             tokens[i].type = "#if"
-            tokens.pop(i+1)
+            tokens.pop(i + 1)
 
             if tokens[i].text.lower() == "#end":
-                if (i+1 < len(tokens) and tokens[i+1].type == 'space'
-                        and i+2 < len(tokens) and tokens[i+2].text.lower() == "if"):
+                if (
+                    i + 1 < len(tokens)
+                    and tokens[i + 1].type == "space"
+                    and i + 2 < len(tokens)
+                    and tokens[i + 2].text.lower() == "if"
+                ):
 
-                    tokens[i].text = tokens[i].text + tokens[i+1].text + tokens[i+2].text
+                    tokens[i].text = (
+                        tokens[i].text + tokens[i + 1].text + tokens[i + 2].text
+                    )
                     tokens.pop(i + 1)
                     tokens.pop(i + 1)
-                    i = i-2
-            i = i-1
+                    i = i - 2
+            i = i - 1
 
     # Fix `Attribute VB_Name = "..."` to allow ... to be used as a name
     i = -1
-    while (i := i+1) < len(tokens):
+    while (i := i + 1) < len(tokens):
         t = tokens[i]
-        if (i+2 < len(tokens) and
-            t.type == "reserved" and t.text.lower() == "attribute" and
-                tokens[i+1].type == "space" and
-                tokens[i+2].type == "reserved" and tokens[i+2].text.lower() == "vb_name"):
+        if (
+            i + 2 < len(tokens)
+            and t.type == "reserved"
+            and t.text.lower() == "attribute"
+            and tokens[i + 1].type == "space"
+            and tokens[i + 2].type == "reserved"
+            and tokens[i + 2].text.lower() == "vb_name"
+        ):
 
             is_vbname = False
-            j = i+2
+            j = i + 2
 
             # lookforward for vb_name value as a string
-            while (j := j+1) < len(tokens) and tokens[j].type != "newline":
+            while (j := j + 1) < len(tokens) and tokens[j].type != "newline":
                 if tokens[j].type == "string":
                     mid = tokens[j].text[1:-1]
                     tokens.pop(j)
@@ -288,4 +318,3 @@ def tokenize(txt) -> List[VBAToken]:
 
 def tokens_to_str(tokens: List[VBAToken]) -> str:
     return "".join([i.text for i in tokens])
-

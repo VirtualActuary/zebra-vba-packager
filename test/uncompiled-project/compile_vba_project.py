@@ -1,19 +1,20 @@
 from locate import this_dir, prepend_sys_path
 import tempfile
+
 with prepend_sys_path("../.."):
     from zebra_vba_packager import Source, Config, compile_xl, runmacro_xl
 
 
 a = Source(
     path_source=this_dir().joinpath("VBALib"),
-    glob_include=['**/*.bas', '**/*.cls'],
+    glob_include=["**/*.bas", "**/*.cls"],
     auto_bas_namespace=False,
-    auto_cls_rename=False
+    auto_cls_rename=False,
 )
 
 b = Source(
     path_source=this_dir().joinpath("MiscF"),
-    glob_include=['*.bas'],
+    glob_include=["*.bas"],
     auto_bas_namespace=True,
     auto_cls_rename=True,
     rename_overwrites={"MiscF": "Fn"},
@@ -22,7 +23,7 @@ b = Source(
 c = Source(
     path_source=this_dir().joinpath("Templategen"),
     auto_bas_namespace=True,
-    auto_cls_rename=True
+    auto_cls_rename=True,
 )
 
 d = Source(
