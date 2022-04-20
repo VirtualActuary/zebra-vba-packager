@@ -41,7 +41,8 @@ def backup_last_50_paths(backup_dir, path, check_lock=True):
         # Backup the directory
         with tempfile.TemporaryDirectory() as outdir:
             if Path(path).is_dir():
-                pack(path, zipname := Path(outdir).joinpath(path.name + ".zip"))
+                zipname = Path(outdir).joinpath(path.name + ".zip")
+                shutil.make_archive(zipname.with_suffix(""), "zip", path)
                 return backup_last_50_paths(backup_dir, zipname, check_lock=check_lock)
 
     os.makedirs(backup_dir, exist_ok=True)
