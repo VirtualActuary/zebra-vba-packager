@@ -171,7 +171,7 @@ class Config:
                 # Archive sensitive unpacking
                 is_archive = [
                     True
-                    for i in [".zip", ".tar", ".7z", ".rar", ".gz"]
+                    for i in [".zip", ".tar", ".7z", ".gz"]
                     if str(source.temp_downloads.name).lower().endswith(i)
                 ]
 
@@ -198,7 +198,7 @@ class Config:
                 elif sum(
                     [
                         str(dlfile).lower().endswith(i)
-                        for i in [".zip", ".tar", ".7z", ".rar", ".gz"]
+                        for i in [".zip", ".tar", ".7z", ".gz"]
                     ]
                 ):
                     unpack(dlfile, source.temp_downloads)
