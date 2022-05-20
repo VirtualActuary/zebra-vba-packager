@@ -5,6 +5,7 @@ import shutil
 import os
 from contextlib import contextmanager
 import download
+from . import util
 
 
 @contextmanager
@@ -91,7 +92,7 @@ def git_download(git_source, dest, revision=None):
                 if i.is_file():
                     os.remove(i)
                 else:
-                    shutil.rmtree(i)
+                    util.rmtree(i)
 
             subprocess.call([git, "clone", git_source, str(Path(".").resolve())])
             if not Path(".git").is_dir():

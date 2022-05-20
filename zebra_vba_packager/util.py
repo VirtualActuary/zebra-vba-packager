@@ -1,10 +1,12 @@
 import hashlib
 import os
 import shutil
+import stat
+import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Union, Callable, Any
 from .excel_compilation import is_locked
 from .py7z import pack
 
@@ -55,3 +57,40 @@ def backup_last_50_paths(backup_dir, path, check_lock=True):
     shutil.copy2(
         path, backup_dir.joinpath(f"{time.strftime('%Y-%m-%d--%H-%M-%S')}--{path.name}")
     )
+
+
+def rmtree(
+    path: Union[str, Path], ignore_errors: bool = False, onerror: Callable = None
+) -> None:
+    """
+    Mimicks shutil.rmtree, but add support for deleting read-only files
+
+    >>> import tempfile
+    >>> with tempfile.TemporaryDirectory() as tdir:
+    ...     os.makedirs(Path(tdir, "tmp"))
+    ...     with Path(tdir, "tmp", "f1").open("w") as f:
+    ...         _ = f.write("tmp")
+    ...     os.chmod(Path(tdir, "tmp", "f1"), stat.S_IREAD|stat.S_IRGRP|stat.S_IROTH)
+    ...     try:
+    ...         shutil.rmtree(Path(tdir, "tmp"))
+    ...     except Exception as e:
+    ...         print(e) # doctest: +ELLIPSIS
+    ...     rmtree(Path(tdir, "tmp"))
+    [WinError 5] Access is denied: '...f1'
+
+    """
+
+    def _onerror(_func: Callable, _path: Union[str, Path], _exc_info) -> None:
+        # Is the error an access error ?
+        try:
+            os.chmod(_path, stat.S_IWUSR)
+            _func(_path)
+        except Exception as e:
+            if ignore_errors:
+                pass
+            elif onerror is not None:
+                onerror(_func, _path, sys.exc_info())
+            else:
+                raise
+
+    return shutil.rmtree(path, False, _onerror)

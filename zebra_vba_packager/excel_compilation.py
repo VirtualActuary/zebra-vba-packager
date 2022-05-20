@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 import tempfile
 import shutil
+from . import util
 import subprocess
 import uuid
 
@@ -118,7 +119,7 @@ def decompile_xl(src_file, dst_dir=None):
         xl_tmp = next(dst_dir_tmp.rglob("*.xlsx"))
         os.rename(xl_tmp, xl_tmp.parent.joinpath(dst_name + ".xlsx"))
 
-        shutil.rmtree(dst_dir, ignore_errors=True)
+        util.rmtree(dst_dir, ignore_errors=True)
         os.makedirs(dst_dir, exist_ok=True)
         shutil.copytree(dst_dir_tmp, dst_dir, dirs_exist_ok=True)
 

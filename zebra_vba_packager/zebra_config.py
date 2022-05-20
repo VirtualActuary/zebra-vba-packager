@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from download import download
 
+from . import util
 from .fix_module_name_length_limitation import (
     _ModnamePair,
     fix_module_name_length_limitation,
@@ -193,7 +194,7 @@ class Config:
                     for i in Path(dlgz).rglob("*"):
                         if str(i).endswith(".tar"):
                             unpack(i, source.temp_downloads)
-                    shutil.rmtree(dlgz)
+                    util.rmtree(dlgz)
 
                 elif sum(
                     [
@@ -204,7 +205,7 @@ class Config:
                     unpack(dlfile, source.temp_downloads)
 
             elif ltype == "path":
-                shutil.rmtree(source.temp_downloads, ignore_errors=True)
+                util.rmtree(source.temp_downloads, ignore_errors=True)
                 os.makedirs(source.temp_downloads, exist_ok=True)
                 for i in Path(link).glob("*"):
                     ii = source.temp_downloads.joinpath(i.name)
@@ -240,7 +241,7 @@ class Config:
                     else:
                         file_matches.pop(i, None)
 
-            shutil.rmtree(source.temp_transformed, ignore_errors=True)
+            util.rmtree(source.temp_transformed, ignore_errors=True)
             os.makedirs(source.temp_transformed, exist_ok=True)
             for i in file_matches:
                 reli = i.relative_to(source.temp_downloads)
@@ -305,7 +306,8 @@ class Config:
 
         output_dir = Path(output_dir)
 
-        shutil.rmtree(output_dir, ignore_errors=True)
+        
+        util.rmtree(output_dir, ignore_errors=True)
         os.makedirs(output_dir, exist_ok=True)
 
         for source in self.sources:
