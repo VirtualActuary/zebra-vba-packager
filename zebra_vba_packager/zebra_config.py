@@ -306,7 +306,6 @@ class Config:
 
         output_dir = Path(output_dir)
 
-        
         util.rmtree(output_dir, ignore_errors=True)
         os.makedirs(output_dir, exist_ok=True)
 
