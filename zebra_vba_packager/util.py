@@ -44,10 +44,9 @@ def backup_last_50_paths(backup_dir, path, check_lock=True):
     if path.is_dir():
         # Backup the directory
         with tempfile.TemporaryDirectory() as outdir:
-            if Path(path).is_dir():
-                zipname = Path(outdir).joinpath(path.name + ".zip")
-                shutil.make_archive(zipname.with_suffix(""), "zip", path)
-                return backup_last_50_paths(backup_dir, zipname, check_lock=check_lock)
+            zipname = Path(outdir).joinpath(path.name + ".zip")
+            shutil.make_archive(zipname.with_suffix(""), "zip", path)
+            return backup_last_50_paths(backup_dir, zipname, check_lock=check_lock)
 
     os.makedirs(backup_dir, exist_ok=True)
 
@@ -145,16 +144,16 @@ def _str_parameter_to_list(x):
     return x
 
 
-def unpack_globs(glob_extract, temp_downloads):
+def unpack_globs(glob_extract, path):
     for glob in _str_parameter_to_list(glob_extract):
-        for i in Path(temp_downloads).glob(glob):
+        for i in Path(path).glob(glob):
             unpack(i, i.parent.joinpath(i.name + "-unpack"))
 
 
-def get_matching_file_patterns(glob_include, glob_exclude, temp_downloads):
+def get_matching_file_patterns(path, glob_include, glob_exclude=None):
     file_matches = set()
     for glob in _str_parameter_to_list(glob_include):
-        for i in Path(temp_downloads).glob(glob):
+        for i in Path(path).glob(glob):
             i = i.resolve()
             if i.is_dir():
                 for j in i.rglob("*"):
@@ -163,7 +162,7 @@ def get_matching_file_patterns(glob_include, glob_exclude, temp_downloads):
                 file_matches.add(i)
 
     for glob in _str_parameter_to_list(glob_exclude):
-        for i in Path(temp_downloads).glob(glob):
+        for i in Path(path).glob(glob):
             i = i.resolve()
             if i.is_dir():
                 for j in i.rglob("*"):
