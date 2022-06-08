@@ -253,9 +253,11 @@ class Config:
                 for f in Path(source.temp_transformed).rglob("*.bas"):
                     with f.open("r") as rf:
                         sources[f] = rf.read()
-                        
+
                 if len(sources):
-                    txt = compile_bas_sources_into_single_file(sources, module_name=name)
+                    txt = compile_bas_sources_into_single_file(
+                        sources, module_name=name
+                    )
                     for i in sources:
                         i.unlink()
 
