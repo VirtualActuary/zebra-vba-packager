@@ -10,7 +10,7 @@ import uuid
 from pathlib import Path
 from typing import Iterable, Union, Callable, Any
 from .excel_compilation import is_locked
-from .py7z import pack
+from .py7z import pack, unpack
 
 
 def file_md5(fname: Path):
@@ -135,3 +135,40 @@ def dir_touch(directory_path):
         os.remove(new_temp_file_path)
     else:
         os.makedirs(directory_path)
+
+
+def _str_parameter_to_list(x):
+    if isinstance(x, str):
+        return [x]
+    if x is None:
+        return []
+    return x
+
+
+def unpack_globs(glob_extract, temp_downloads):
+    for glob in _str_parameter_to_list(glob_extract):
+        for i in Path(temp_downloads).glob(glob):
+            unpack(i, i.parent.joinpath(i.name + "-unpack"))
+
+
+def get_matching_file_patterns(glob_include, glob_exclude, temp_downloads):
+    file_matches = set()
+    for glob in _str_parameter_to_list(glob_include):
+        for i in Path(temp_downloads).glob(glob):
+            i = i.resolve()
+            if i.is_dir():
+                for j in i.rglob("*"):
+                    file_matches.add(j.resolve())
+            else:
+                file_matches.add(i)
+
+    for glob in _str_parameter_to_list(glob_exclude):
+        for i in Path(temp_downloads).glob(glob):
+            i = i.resolve()
+            if i.is_dir():
+                for j in i.rglob("*"):
+                    file_matches.discard(j.resolve())
+            else:
+                file_matches.discard(i)
+
+    return file_matches
