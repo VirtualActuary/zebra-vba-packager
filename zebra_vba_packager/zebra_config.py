@@ -253,13 +253,14 @@ class Config:
                 for f in Path(source.temp_transformed).rglob("*.bas"):
                     with f.open("r") as rf:
                         sources[f] = rf.read()
+                        
+                if len(sources):
+                    txt = compile_bas_sources_into_single_file(sources, module_name=name)
+                    for i in sources:
+                        i.unlink()
 
-                txt = compile_bas_sources_into_single_file(sources, module_name=name)
-                for i in sources:
-                    i.unlink()
-
-                with first(sources).open("wb") as fw:
-                    fw.write(txt.encode("utf-8"))
+                    with first(sources).open("wb") as fw:
+                        fw.write(txt.encode("utf-8"))
 
             if source.auto_bas_namespace:
                 bas_create_namespaced_classes(source.temp_transformed)
