@@ -148,6 +148,7 @@ class Config:
         self.output_dir = None
 
     def run(self, output_dir=None):
+        util.delete_old_files_in_tempdir()
         for source in self.sources:
 
             if source.pre_process is not None:

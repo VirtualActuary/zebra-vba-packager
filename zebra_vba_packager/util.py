@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import os
 import shutil
@@ -94,3 +95,24 @@ def rmtree(
                 raise
 
     return shutil.rmtree(path, False, _onerror)
+
+
+def delete_old_files_in_tempdir():
+    """
+    Remove all directories in the temp/zebra-vba-packager directory that is older
+    than 8 weeks. These directories are only deleted if more than 10 directories exist.
+    If only 10 directories remain, the function stops executing.
+    """
+    temp_files_location = Path(tempfile.gettempdir(), "zebra-vba-packager")
+    temp_files = list(temp_files_location.glob("*"))
+    number_of_files = len(temp_files)
+
+    for file in temp_files:
+        if number_of_files <= 10:
+            return
+        modified_date = os.path.getmtime(file)
+        today = datetime.datetime.today()
+        old_date = datetime.timedelta(weeks=8)
+        if modified_date < (today - old_date).timestamp():
+            rmtree(file)
+            number_of_files -= 1
