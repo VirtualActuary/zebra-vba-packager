@@ -133,10 +133,10 @@ class Source:
         )
         if self.url_source:
             self.temp_downloads_file = Path(str(self.temp_downloads) + "-file-download")
-            os.makedirs(self.temp_downloads_file, exist_ok=True)
+            util.dir_touch(self.temp_downloads_file)
 
-        os.makedirs(self.temp_downloads, exist_ok=True)
-        os.makedirs(self.temp_transformed, exist_ok=True)
+        util.dir_touch(self.temp_downloads)
+        util.dir_touch(self.temp_transformed)
 
 
 class Config:
@@ -148,6 +148,7 @@ class Config:
         self.output_dir = None
 
     def run(self, output_dir=None):
+        util.delete_old_files_in_tempdir()
         for source in self.sources:
 
             if source.pre_process is not None:
