@@ -54,14 +54,6 @@ def caller_id(frame_info: inspect.FrameInfo):
     return strhash(f"{callpath}@{frame_info.frame.f_lineno}")
 
 
-def str_parameter_to_list(x):
-    if isinstance(x, str):
-        return [x]
-    if x is None:
-        return []
-    return x
-
-
 @dataclass(init=True)
 class Source:
     pre_process: Callable = None
@@ -197,12 +189,7 @@ class Config:
                             unpack(i, source.temp_downloads)
                     util.rmtree(dlgz)
 
-                elif sum(
-                    [
-                        str(dlfile).lower().endswith(i)
-                        for i in [".zip", ".tar", ".7z", ".gz"]
-                    ]
-                ):
+                else:
                     unpack(dlfile, source.temp_downloads)
 
             elif ltype == "path":
@@ -218,29 +205,12 @@ class Config:
                         shutil.copytree(i, ii)
 
             # Do the unpacking thing
-            for glob in str_parameter_to_list(source.glob_extract):
-                for i in Path(source.temp_downloads).glob(glob):
-                    unpack(i, i.parent.joinpath(i.name + "-unpack"))
+            util.unpack_globs(source.glob_extract, source.temp_downloads)
 
             # Include/Exclude patterns
-            file_matches = {}
-            for glob in str_parameter_to_list(source.glob_include):
-                for i in Path(source.temp_downloads).glob(glob):
-                    i = i.resolve()
-                    if i.is_dir():
-                        for j in i.rglob("*"):
-                            file_matches[j.resolve()] = None
-                    else:
-                        file_matches[i] = None
-
-            for glob in str_parameter_to_list(source.glob_exclude):
-                for i in Path(source.temp_downloads).glob(glob):
-                    i = i.resolve()
-                    if i.is_dir():
-                        for j in i.rglob("*"):
-                            file_matches.pop(j.resolve(), None)
-                    else:
-                        file_matches.pop(i, None)
+            file_matches = util.get_matching_file_patterns(
+                source.glob_include, source.glob_exclude, source.temp_downloads
+            )
 
             util.rmtree(source.temp_transformed, ignore_errors=True)
             os.makedirs(source.temp_transformed, exist_ok=True)
@@ -284,12 +254,15 @@ class Config:
                     with f.open("r") as rf:
                         sources[f] = rf.read()
 
-                txt = compile_bas_sources_into_single_file(sources, module_name=name)
-                for i in sources:
-                    i.unlink()
+                if len(sources):
+                    txt = compile_bas_sources_into_single_file(
+                        sources, module_name=name
+                    )
+                    for i in sources:
+                        i.unlink()
 
-                with first(sources).open("wb") as fw:
-                    fw.write(txt.encode("utf-8"))
+                    with first(sources).open("wb") as fw:
+                        fw.write(txt.encode("utf-8"))
 
             if source.auto_bas_namespace:
                 bas_create_namespaced_classes(source.temp_transformed)
