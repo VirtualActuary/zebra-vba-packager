@@ -6,6 +6,7 @@ import stat
 import sys
 import tempfile
 import time
+import uuid
 from pathlib import Path
 from typing import Iterable, Union, Callable, Any
 from .excel_compilation import is_locked
@@ -99,12 +100,12 @@ def rmtree(
 
 def delete_old_files_in_tempdir():
     """
-    Remove all directories in the temp/zebra-vba-packager directory that is older
-    than 8 weeks. These directories are only deleted if more than 10 directories exist.
-    If only 10 directories remain, the function stops executing.
+    Keep removing directories older than 8 weeks from %temp%/zebra-vba-packager
+    until all of them are removed or the directory has 10 directories left.
     """
     temp_files_location = Path(tempfile.gettempdir(), "zebra-vba-packager")
     temp_files = list(temp_files_location.glob("*"))
+    temp_files.sort(key=lambda x: os.path.getmtime(x))
     number_of_files = len(temp_files)
 
     for file in temp_files:
@@ -116,3 +117,21 @@ def delete_old_files_in_tempdir():
         if modified_date < (today - old_date).timestamp():
             rmtree(file)
             number_of_files -= 1
+
+
+def dir_touch(directory_path):
+    """
+    Creates a directory if it doesn't exist yet.
+    If it does exist. Changes that directory's "date modified" value to now.
+
+    Args:
+        directory_path:
+            Path to the directory.
+    """
+
+    if os.path.exists(directory_path):
+        new_temp_file_path = Path(directory_path, str(uuid.uuid4()))
+        open(new_temp_file_path, "w").close()
+        os.remove(new_temp_file_path)
+    else:
+        os.makedirs(directory_path)
