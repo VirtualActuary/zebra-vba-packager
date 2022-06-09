@@ -209,7 +209,7 @@ class Config:
 
             # Include/Exclude patterns
             file_matches = util.get_matching_file_patterns(
-                source.glob_include, source.glob_exclude, source.temp_downloads
+                source.temp_downloads, source.glob_include, source.glob_exclude
             )
 
             util.rmtree(source.temp_transformed, ignore_errors=True)
