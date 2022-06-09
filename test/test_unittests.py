@@ -235,7 +235,7 @@ class TestBasCombining(unittest.TestCase):
             
             '*************** MiscAssign
             #If VBA7 And Win64 Then
-                Private Declare PtrSafe Function MiscAssign_ShellExecuteA Lib "Shell32.dll" _
+                Private Declare PtrSafe Function ShellExecuteA Lib "Shell32.dll" _
                     (ByVal hwnd As Long, _
                     ByVal lpOperation As String, _
                     ByVal lpFile As String, _
@@ -244,7 +244,7 @@ class TestBasCombining(unittest.TestCase):
                     ByVal nShowCmd As Long) As Long
             #Else
             
-                Private Declare Function MiscAssign_ShellExecuteA Lib "Shell32.dll" _
+                Private Declare Function ShellExecuteA Lib "Shell32.dll" _
                     (ByVal hwnd As Long, _
                     ByVal lpOperation As String, _
                     ByVal lpFile As String, _
