@@ -26,7 +26,7 @@ class VBASectionClassifier:
             self.type = "unknown"
 
 
-def get_private_names(tokens: List[VBAToken]):
+def get_private_renames(tokens: List[VBAToken]):
     """
     Examples:
         >>> tokens = tokenize('''Attribute VB_Name = "MiscArray"
@@ -47,15 +47,15 @@ def get_private_names(tokens: List[VBAToken]):
         ... End Function
         ... ''')
 
-        >>> get_private_names(tokens)
-        ['funcA', 'funcB', 'theConst', 'Bla', 'Bla2']
+        >>> get_private_renames(tokens)
+        ['theConst', 'Bla', 'Bla2']
     """
 
     return [
         tokens[j - 1].text
         for (i, j) in match_tokens(
             tokens,
-            "private [static] [declare] [ptrsafe] function|sub|parameter|enum|const .*",
+            "private [static] function|sub|parameter|enum|const .*",
             on_line_start=True,
         )
     ]
@@ -198,7 +198,7 @@ def compile_bas_sources_into_single_file(
 
     # Replace private functions and consts etc. with guarded named versions of themselves
     for key, tokens in sources.items():
-        privates = {i.lower(): f"{names[key]}_{i}" for i in get_private_names(tokens)}
+        privates = {i.lower(): f"{names[key]}_{i}" for i in get_private_renames(tokens)}
 
         for t in tokens:
             if t.type == "name" and t.text.lower() in privates:
