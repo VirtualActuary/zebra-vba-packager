@@ -157,7 +157,8 @@ def get_matching_file_patterns(path, glob_include, glob_exclude=None):
             i = i.resolve()
             if i.is_dir():
                 for j in i.rglob("*"):
-                    file_matches.add(j.resolve())
+                    if j.is_file():
+                        file_matches.add(j.resolve())
             else:
                 file_matches.add(i)
 
@@ -166,7 +167,8 @@ def get_matching_file_patterns(path, glob_include, glob_exclude=None):
             i = i.resolve()
             if i.is_dir():
                 for j in i.rglob("*"):
-                    file_matches.discard(j.resolve())
+                    if j.is_file():
+                        file_matches.discard(j.resolve())
             else:
                 file_matches.discard(i)
 
