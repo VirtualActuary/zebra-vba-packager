@@ -106,7 +106,8 @@ def cls_renaming_dict(dirname, user_name_transformer):
         if str(key).lower().endswith(".cls"):
             modname = vba_module_name(value)
             if not user_name_transformer.match(modname):
-                d[modname] = f"z{modname}"
+                if not modname.startswith("z_"):
+                    d[modname] = f"z_{modname}"
 
     return d
 

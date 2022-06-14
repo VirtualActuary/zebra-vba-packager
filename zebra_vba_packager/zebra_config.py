@@ -82,6 +82,9 @@ class Source:
     post_process: Callable = None
 
     def __post_init__(self):
+        self.glob_exclude = util._str_parameter_to_list(self.glob_exclude)
+        self.glob_exclude.append("**/z__NameSpaces.bas")
+
         if (
             sum(
                 [
@@ -195,6 +198,8 @@ class Config:
             elif ltype == "path":
                 util.rmtree(source.temp_downloads, ignore_errors=True)
                 os.makedirs(source.temp_downloads, exist_ok=True)
+                # Files are copied one by one because of an edge case where the destination directory
+                # wasn't completely deleted (potentially when util.rmtree has ignore_errors=True)
                 for i in Path(link).glob("*"):
                     ii = source.temp_downloads.joinpath(i.name)
                     os.makedirs(ii.parent, exist_ok=True)
