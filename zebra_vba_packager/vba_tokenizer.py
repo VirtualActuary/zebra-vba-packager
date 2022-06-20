@@ -56,11 +56,12 @@ hashif_re = re.compile(
 # doubled is treated as a single character in the string. If an
 # unmatched quote appears, the string is terminated.
 string_re = re.compile('"(?:[^"]*"")*[^"]*"(?!")')
+string_tmp_re = re.compile("࿓࿓*࿓")
 
 # https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/rem-statement
-comment_re = re.compile(r"((')|(:[ \t]*rem[ \t])).*", re.IGNORECASE)
+comment_re = re.compile(r"(((')|(:[ \t]*rem[ \t])).*)($|\n)", re.IGNORECASE)
 
-commentrem_re = re.compile(r"[ \t]*rem[ \t].*", re.IGNORECASE)
+commentrem_re = re.compile(r"(^|\n)[ \t]*(rem[ \t].*)($|\n)", re.IGNORECASE)
 
 whitespace_re = re.compile(r"([ \t]|(_\n))+")
 
@@ -155,7 +156,9 @@ def tokenize(txt) -> List[VBAToken]:
     ... Option Compare _
     ... Text
     ... Option Explicit
-    ...
+    ... ' This is a multiline _
+    ... comment
+    ... Dim a as String = "hello"
     ... ' Compression and decompression methods v1.1.1
     ... #If EarlyBinding = False Then
     ...     Public Enum IOMode
@@ -167,7 +170,7 @@ def tokenize(txt) -> List[VBAToken]:
     ... '''
 
     >>> tokens = tokenize(vba_txt)
-    >>> "".join([i.text for i in tokenize(vba_txt)]).replace("\r", "") == vba_txt
+    >>> "".join([i.text for i in tokens]) == vba_txt
     True
 
     """
@@ -183,27 +186,24 @@ def tokenize(txt) -> List[VBAToken]:
         idxmap[(i, j)] = "name"
         s = s[: i - 1] + "·" * (j - i + 2) + s[j + 1 :]
 
-    # Replace possible string entries to not contain comment starters like ' or REM
-    s = replace_idx(s, [[i + 1, j - 1] for i, j in str_idxes(s)])
-    s = replace_idx(s, comment_idx := list(comment_idxes(s)))
+    # Protect possible string entries with ࿓࿓...࿓
+    s = replace_idx(s, str_idxes(s), with_="࿓")
+
+    # Replace line continuation with spaces (after string search)
+    s = replace_idx(s, re_idx(linecont_re, s, 1))
+
+    s = replace_idx(s, comment_idx := list(re_idx(comment_re, s, 1)), with_="·")
     idxmap.update((i, "comment") for i in comment_idx)
 
-    s = replace_idx(s, str_idx := list(str_idxes(s)))
-    idxmap.update((i, "string") for i in str_idx)
+    s = replace_idx(s, commentrem_idx := list(re_idx(commentrem_re, s, 2)), with_="·")
+    idxmap.update((i, "comment") for i in commentrem_idx)
 
-    s = replace_idx(s, hashif_idx := list(re_idx(hashif_re, s, 2)))
+    s = replace_idx(s, hashif_idx := list(re_idx(hashif_re, s, 2)), with_="·")
     idxmap.update((i, "#if") for i in hashif_idx)
 
-    s = replace_idx(
-        s,
-        wspace_idx := list(
-            re_idx(
-                whitespace_re, replace_idx(s, sorted(idxmap), with_="x"), 0
-            )
-        ),
-    )
-    idxmap.update((i, "space") for i in wspace_idx)
-
+    # search all ࿓࿓...࿓ entries
+    idxmap.update((i, "string") for i in re_idx(string_tmp_re, s))
+    idxmap.update((i, "space") for i in re_idx(whitespace_re, s))
     idxmap.update(
         (i, "name" if lower[i[0] : i[1]] not in vba_names_set else "reserved")
         for i in list(re_idx(name_re, s, 2))
@@ -215,11 +215,7 @@ def tokenize(txt) -> List[VBAToken]:
         if i == j:
             continue
         if known:
-            ttype = idxmap[(i, j)]
-            if ttype == "newline":
-                tokens.append(VBAToken(text="\n", type=ttype))
-            else:
-                tokens.append(VBAToken(text=txt[i:j], type=ttype))
+            tokens.append(VBAToken(text=txt[i:j], type=idxmap[(i, j)]))
         else:
             tokens.append(VBAToken(text=txt[i:j], type="unknown"))
 
