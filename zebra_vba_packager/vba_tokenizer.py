@@ -120,15 +120,15 @@ def re_idx(reg, s, group_nr=0):
     return [(m.start(group_nr), m.end(group_nr)) for m in re.finditer(reg, s)]
 
 
-def replace_with_spaces(s: str, idxes, invert=False, spacechar=" "):
-    assert len(spacechar) == 1
+def replace_idx(s: str, idxes, with_=" ", invert=False):
+    assert len(with_) == 1
 
     sparts = []
     for (i, j), active in idx_sequencing(idxes, len(s)):
         if (invert and active) or (not invert and not active):
             sparts.append(s[i:j])
         else:
-            sparts.append(spacechar * (j - i))
+            sparts.append(with_ * (j - i))
 
     return "".join(sparts)
 
@@ -184,21 +184,21 @@ def tokenize(txt) -> List[VBAToken]:
         s = s[: i - 1] + "·" * (j - i + 2) + s[j + 1 :]
 
     # Replace possible string entries to not contain comment starters like ' or REM
-    s = replace_with_spaces(s, [[i + 1, j - 1] for i, j in str_idxes(s)])
-    s = replace_with_spaces(s, comment_idx := list(comment_idxes(s)))
+    s = replace_idx(s, [[i + 1, j - 1] for i, j in str_idxes(s)])
+    s = replace_idx(s, comment_idx := list(comment_idxes(s)))
     idxmap.update((i, "comment") for i in comment_idx)
 
-    s = replace_with_spaces(s, str_idx := list(str_idxes(s)))
+    s = replace_idx(s, str_idx := list(str_idxes(s)))
     idxmap.update((i, "string") for i in str_idx)
 
-    s = replace_with_spaces(s, hashif_idx := list(re_idx(hashif_re, s, 2)))
+    s = replace_idx(s, hashif_idx := list(re_idx(hashif_re, s, 2)))
     idxmap.update((i, "#if") for i in hashif_idx)
 
-    s = replace_with_spaces(
+    s = replace_idx(
         s,
         wspace_idx := list(
             re_idx(
-                whitespace_re, replace_with_spaces(s, sorted(idxmap), spacechar="x"), 0
+                whitespace_re, replace_idx(s, sorted(idxmap), with_="x"), 0
             )
         ),
     )
