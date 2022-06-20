@@ -67,12 +67,6 @@ whitespace_re = re.compile(r"([ \t]|(_\n))+")
 newline_re = re.compile(r"\n")
 
 
-@dataclass
-class VBAToken:
-    text: str
-    type: str  # "name" "unknown"
-
-
 def str_idxes(s):
     idelta = 0
     lines = s.split("\n")
@@ -107,6 +101,12 @@ def comment_idxes(s):
         idelta += len(line) + 1
 
     return idxes
+
+
+@dataclass
+class VBAToken:
+    text: str
+    type: str  # "name" "unknown"
 
 
 def prod(lst):
@@ -183,7 +183,7 @@ def tokenize(txt) -> List[VBAToken]:
         idxmap[(i, j)] = "name"
         s = s[: i - 1] + "·" * (j - i + 2) + s[j + 1 :]
 
-    # Purge possible string entries of containing comment starters like ' or REM
+    # Replace possible string entries to not contain comment starters like ' or REM
     s = replace_with_spaces(s, [[i + 1, j - 1] for i, j in str_idxes(s)])
     s = replace_with_spaces(s, comment_idx := list(comment_idxes(s)))
     idxmap.update((i, "comment") for i in comment_idx)
