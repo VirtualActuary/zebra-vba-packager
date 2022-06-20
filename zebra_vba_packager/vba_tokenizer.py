@@ -55,7 +55,7 @@ hashif_re = re.compile(
 # the quote character used to start the string. That character, when
 # doubled is treated as a single character in the string. If an
 # unmatched quote appears, the string is terminated.
-string_re = re.compile('"(?:[^"]*"")*[^"]*"(?!")')
+string_re = re.compile('"(?:[^"^\n]*"")*[^"^\n]*"(?!")')
 string_tmp_re = re.compile("࿓࿓*࿓")
 
 # https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/rem-statement
@@ -66,42 +66,6 @@ commentrem_re = re.compile(r"(^|\n)[ \t]*(rem[ \t].*)($|\n)", re.IGNORECASE)
 whitespace_re = re.compile(r"([ \t]|(_\n))+")
 
 newline_re = re.compile(r"\n")
-
-
-def str_idxes(s):
-    idelta = 0
-    lines = s.split("\n")
-    for line in lines:
-        for i, j in re_idx(string_re, line):
-            yield i + idelta, j + idelta
-        idelta += len(line) + 1
-
-
-def comment_idxes(s):
-    idelta = 0
-    idxes = []
-    lines = s.split("\n")
-    comment_cont = False
-    for line in lines:
-        if comment_cont:
-            idxes[-1] = (idxes[-1][0], idelta + len(line))
-            if not line[-1:] == "_":
-                comment_cont = False
-        else:
-            idx = []
-            if (x := re_idx(commentrem_re, line)) and x[0][0] == 0:
-                idx = [(idelta + x[0][0], idelta + len(line))]
-            elif x := re_idx(comment_re, line):
-                idx = [(idelta + x[0][0], idelta + len(line))]
-
-            idxes.extend(idx)
-
-            if idx and line[-1:] == "_":
-                comment_cont = True
-
-        idelta += len(line) + 1
-
-    return idxes
 
 
 @dataclass
@@ -187,7 +151,7 @@ def tokenize(txt) -> List[VBAToken]:
         s = s[: i - 1] + "·" * (j - i + 2) + s[j + 1 :]
 
     # Protect possible string entries with ࿓࿓...࿓
-    s = replace_idx(s, str_idxes(s), with_="࿓")
+    s = replace_idx(s, re_idx(string_re, s), with_="࿓")
 
     # Replace line continuation with spaces (after string search)
     s = replace_idx(s, re_idx(linecont_re, s, 1))
