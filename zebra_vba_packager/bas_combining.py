@@ -158,7 +158,7 @@ def compile_code_into_sections(
                 )
             )
             try:
-                _, j = [x + i0 for x in next(match_tokens(tokens[i0:], r"\r\n"))]
+                _, j = [x + i0 for x in next(match_tokens(tokens[i0:], r"\n"))]
             except StopIteration:
                 j = len(tokens)
 

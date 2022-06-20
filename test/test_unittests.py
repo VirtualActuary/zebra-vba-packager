@@ -88,7 +88,7 @@ class TestBasCombining(unittest.TestCase):
         )
 
         self.assertTrue(
-            "".join([tokens_to_str(i.tokens) for i in y]).replace("\r\n", "\n") == x
+            "".join([tokens_to_str(i.tokens) for i in y]) == x
         )
 
     def test_compile_code_into_sections_ptrsafe(self):
@@ -162,7 +162,7 @@ class TestBasCombining(unittest.TestCase):
         )
 
         self.assertTrue(
-            "".join([tokens_to_str(i.tokens) for i in y]).replace("\r\n", "\n") == x
+            "".join([tokens_to_str(i.tokens) for i in y]) == x
         )
 
     def test_combine_bas_sources_into_single_file(self):

@@ -28,11 +28,11 @@ def match_tokens(
 
     # Pretend that tokens[-1] is a newline
     def token_at(i):
-        return tokens[i] if i >= 0 else VBAToken(type="newline", text="\r\n")
+        return tokens[i] if i >= 0 else VBAToken(type="newline", text="\n")
 
     # For on_line_start start at tokens[-1] and inject first match as =="\r\n"
     if on_line_start:
-        matchables.insert(0, SN(optional=False, re=SN(match=lambda x: x == "\r\n")))
+        matchables.insert(0, SN(optional=False, re=SN(match=lambda x: x == "\n")))
         i = -2
     else:
         i = -1
