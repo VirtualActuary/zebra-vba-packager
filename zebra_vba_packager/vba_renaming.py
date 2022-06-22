@@ -3,7 +3,7 @@ from copy import deepcopy
 from textwrap import dedent
 from types import SimpleNamespace
 from typing import List
-from exceptions import ModuleNameError
+from .exceptions import ModuleNameError
 from .match_tokens import match_tokens
 from .vba_tokenizer import tokenize, VBAToken, tokens_to_str
 from pathlib import Path
