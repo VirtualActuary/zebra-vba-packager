@@ -322,7 +322,8 @@ class Config:
                     f"Public {nspacename} As New {mpair.input_modname}"
                 )
 
-        write_tokens(
-            output_dir.joinpath("z__NameSpaces.bas"),
-            tokenize("\n".join(namespace_declarations)),
-        )
+        if len(namespace_declarations) > 2:
+            write_tokens(
+                output_dir.joinpath("z__NameSpaces.bas"),
+                tokenize("\n".join(namespace_declarations)),
+            )
