@@ -165,6 +165,23 @@ class TestBasCombining(unittest.TestCase):
             "".join([tokens_to_str(i.tokens) for i in y]) == x
         )
 
+    def test_underscore_names(self):
+        txt = lstripdedent("""
+        Dim cn As WorkbookConnection
+        On Error GoTo err_
+        Application.Calculation = xlCalculationManual
+        Dim numConnections As Integer, i As Integer
+           End If
+        Next
+        GoTo done_
+        err_:
+        done_:
+        """)
+
+        self.assertEqual(
+            tokens_to_str(tokenize(txt)), txt
+        )
+
     def test_combine_bas_sources_into_single_file(self):
         sources = {
             "file_a": lstripdedent(

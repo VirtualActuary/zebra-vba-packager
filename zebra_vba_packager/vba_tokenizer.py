@@ -63,7 +63,8 @@ comment_re = re.compile(r"(((')|(:[ \t]*rem[ \t])).*)($|\n)", re.IGNORECASE)
 
 commentrem_re = re.compile(r"(^|\n)[ \t]*(rem[ \t].*)($|\n)", re.IGNORECASE)
 
-whitespace_re = re.compile(r"([ \t]|(_\n))+")
+# including line continuation underscores
+whitespace_re = re.compile(r"([ \t]|([ \t]_\n))+")
 
 newline_re = re.compile(r"\n")
 
