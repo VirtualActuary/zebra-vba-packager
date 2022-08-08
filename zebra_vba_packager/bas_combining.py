@@ -172,7 +172,7 @@ def compile_code_into_sections(
             key_new = (keys[i][0], max(keys[i][1], keys[i + 1][1]))
 
             mixed[key_new] = mixed.pop(keys[i])
-            mixed.pop(keys[i+1])
+            mixed.pop(keys[i + 1])
 
             keys_sets[i] = set(range(*key_new))
             keys_sets.pop(i + 1)
