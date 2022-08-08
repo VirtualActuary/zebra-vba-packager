@@ -94,6 +94,7 @@ def find_all_hashif_sections(tokens):
 
 
 def find_all_function_sections(tokens):
+
     type_map = {
         "property": "function",
         "sub": "function",
