@@ -4,6 +4,7 @@ from textwrap import dedent
 import locate
 import unittest
 
+
 with locate.prepend_sys_path(".."):
     from zebra_vba_packager.bas_combining import (
         compile_code_into_sections,
@@ -11,6 +12,7 @@ with locate.prepend_sys_path(".."):
     )
     from zebra_vba_packager.vba_tokenizer import tokens_to_str, tokenize
     from zebra_vba_packager.match_tokens import match_tokens
+    from zebra_vba_packager.util import to_unix_line_endings
 
 
 def lstripdedent(s):
@@ -299,6 +301,25 @@ class TestBasCombining(unittest.TestCase):
         ):
             sources["file_b"] = f"Option Private\n{sources['file_b']}"
             compile_bas_sources_into_single_file(sources)
+
+    def test_combining_bas_sources_into_single_file2(self):
+        txt1 = to_unix_line_endings(
+            locate.this_dir()
+            .joinpath("misc-vba-example/2022-08-08-output/combined.bas")
+            .read_text()
+        )
+        txt2 = to_unix_line_endings(
+            compile_bas_sources_into_single_file(
+                {
+                    i: i.read_text()
+                    for i in locate.this_dir()
+                    .joinpath("misc-vba-example/2022-08-08-input")
+                    .glob("*")
+                }
+            )
+        )
+
+        self.assertEqual(txt1, txt2)
 
 
 if __name__ == "__main__":

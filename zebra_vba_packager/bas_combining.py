@@ -94,33 +94,20 @@ def find_all_hashif_sections(tokens):
 
 
 def find_all_function_sections(tokens):
-
-    type_map = {
-        "property": "function",
-        "sub": "function",
-        "function": "function",
-        "enum": "enum",
-    }
-
     sections = {}
-    for i, i0 in match_tokens(
-        tokens,
-        "[private|public] property|sub|function|enum",
-        on_line_start=True,
-    ):
-
+    start = 0
+    while True:
         try:
-            j = (
-                i0
-                + next(match_tokens(tokens[i0:], r"end property|sub|function|enum"))[1]
+            pre = "[private|public] property|sub|function|enum"
+            i, j = find_section(tokens[start:], pre, r"end property|sub|function|enum")
+            sections[(start + i, start + j)] = (
+                "function"
+                if (type_ := tokens[start + j - 1].text.lower()) in ("sub", "property")
+                else type_
             )
-
+            start += j
         except StopIteration:
-            j = len(tokens)
-
-        sections[(i, j)] = type_map[
-            first({_.text.lower() for _ in tokens[i : i + 3]}.intersection(type_map))
-        ]
+            break
 
     return sections
 
@@ -143,8 +130,8 @@ def find_all_declaration_sections(tokens):
 
 
 def find_all_global_var_sections(tokens):
-    return {
-        tuple(idx): "unknown"
+    sections = {
+        tuple(idx): "global"
         for idx in match_tokens(
             tokens,
             "[private|public|dim] .* as [new] .*",
@@ -152,6 +139,8 @@ def find_all_global_var_sections(tokens):
             on_line_end=True,
         )
     }
+
+    return sections
 
 
 def compile_code_into_sections(
@@ -303,6 +292,7 @@ def compile_bas_sources_into_single_file(
         "attribute": [],
         "option": [],
         "declare": [],
+        "global": [],
         "other": [],
         "function": [],
     }
