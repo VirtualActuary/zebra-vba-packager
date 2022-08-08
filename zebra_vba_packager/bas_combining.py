@@ -1,11 +1,13 @@
 from copy import deepcopy
 from dataclasses import dataclass
+from itertools import chain
 from pathlib import Path
-from pprint import pprint
+from contextlib import suppress
 from textwrap import indent
 from typing import Dict, Union, List
 from functools import reduce
 import operator
+from sortedcontainers import SortedDict
 
 from .match_tokens import match_tokens
 from .vba_renaming import vba_module_name
@@ -61,6 +63,85 @@ def get_private_renames(tokens: List[VBAToken]):
     ]
 
 
+def find_section(tokens, start_match_string, end_match_string):
+    i, j = next(match_tokens(tokens, start_match_string, on_line_start=True))
+    k, l = [
+        _ + j
+        for _ in next(match_tokens(tokens[j:], end_match_string, on_line_start=True))
+    ]
+    return i, l
+
+
+def find_all_hashif_sections(tokens):
+    in_ = 0
+    sections = []
+    for i in range(len(tokens)):
+        if tokens[i].type == "#if":
+            if tokens[i].text.lower() == "#if":
+                if in_ == 0:
+                    sections.append([i, None])
+                in_ += 1
+            elif "#end" in tokens[i].text.lower():
+                if in_ == 1:
+                    sections[-1][-1] = i + 1
+                in_ -= 1
+
+    if sections and None in sections[-1]:
+        sections = sections[:-1]
+
+    return {tuple(i): "#if" for i in sections}
+
+
+def find_all_function_sections(tokens):
+    sections = {}
+    start = 0
+    while True:
+        try:
+            pre = "[private|public] property|sub|function|enum"
+            i, j = find_section(tokens[start:], pre, r"end property|sub|function|enum")
+            sections[(start + i, start + j)] = (
+                "function"
+                if (type_ := tokens[start + j - 1].text.lower()) in ("sub", "property")
+                else type_
+            )
+            start += j
+        except StopIteration:
+            break
+
+    return sections
+
+
+def find_all_declaration_sections(tokens):
+    sections = {}
+    for i, i0 in match_tokens(
+        tokens,
+        "[private|public] declare|option|attribute",
+        on_line_start=True,
+    ):
+        j = len(tokens)
+        with suppress(StopIteration):
+            j = i0 + next(match_tokens(tokens[i0:], r"\n"))[1]
+
+        sections[(i, j)] = tokens[i0 - 1].text.lower()
+    return sections
+
+
+def find_all_global_var_sections(tokens):
+    sections = {}
+    for i, i0 in match_tokens(
+        tokens,
+        "[private|public|dim] .* as [new] .*",
+        on_line_start=True,
+    ):
+        j = len(tokens)
+        with suppress(StopIteration):
+            j = i0 + next(match_tokens(tokens[i0:], r"\n"))[1]
+
+        sections[(i, j)] = "unknown"
+
+    return sections
+
+
 def compile_code_into_sections(
     input: Union[List[VBAToken], str], origin: Union[str, None] = None
 ) -> List[VBASectionClassifier]:
@@ -72,117 +153,53 @@ def compile_code_into_sections(
     if not isinstance(tokens, list):
         tokens = tokenize(input)
 
-    classifiers = [VBASectionClassifier(tokens, origin=origin)]
+    mixed = SortedDict()
+    for f in [
+        find_all_hashif_sections,
+        find_all_function_sections,
+        find_all_declaration_sections,
+        find_all_global_var_sections,
+    ]:
+        mixed.update(f(tokens))
 
-    def extend_classification_list(
-        classifiers,
-        idx,
-        start_marker,
-        end_marker,
-        params1=None,
-        params2=None,
-        params3=None,
+    keys = list(mixed.keys())
+    keys_sets = [set(range(key[0], key[1])) for key in keys]
+
+    # merge overlapping sections
+    i = 0
+    while i < len(keys) - 1:
+        if keys_sets[i].intersection(keys_sets[i + 1]):
+            key_new = (keys[i][0], max(keys[i][1], keys[i + 1][1]))
+
+            mixed[key_new] = mixed.pop(keys[i])
+            mixed.pop(keys[i + 1])
+
+            keys_sets[i] = set(range(*key_new))
+            keys_sets.pop(i + 1)
+
+            keys[i] = key_new
+            keys.pop(i + 1)
+
+            continue
+        i += 1
+
+    # Fill empty gaps
+    for (_, i), (j, _) in zip(
+        (l := list(mixed.keys())), chain(l[1:], [(len(tokens), None)])
     ):
-        tokens = classifiers[idx].tokens
+        if i != j:
+            mixed[i, j] = "unknown"
 
-        c1 = classifiers[idx]
-        c1.tokens = tokens[:start_marker]
-
-        c2 = VBASectionClassifier(tokens[start_marker:end_marker], origin=c1.origin)
-        c3 = VBASectionClassifier(tokens[end_marker:], origin=c1.origin)
-        for c, p in ((c1, params1), (c2, params2), (c3, params3)):
-            if p is not None:
-                for attr in dir(p):
-                    if not attr.startswith("_"):
-                        if getattr(p, attr) is not None:
-                            setattr(c, attr, getattr(p, attr))
-
-        classifiers.insert(idx + 1, c2)
-        classifiers.insert(idx + 2, c3)
-
-    def find_section(tokens, start_match_string, end_match_string):
-        i, j = next(match_tokens(tokens, start_match_string, on_line_start=True))
-        k, l = [
-            _ + j
-            for _ in next(
-                match_tokens(tokens[j:], end_match_string, on_line_start=True)
-            )
-        ]
-        return i, l
-
-    # If seperation
-    idx = -1
-    while (idx := idx + 1) < len(classifiers):
-        if classifiers[idx].type != "unknown":
-            continue
-
-        tokens = classifiers[idx].tokens
-        try:
-            i, j = find_section(tokens, "#if", "#end\s*if")
-            extend_classification_list(
-                classifiers, idx, i, j, params2=VBASectionClassifier(type="#if")
-            )
-            idx = idx - 1
-        except StopIteration:
-            break
-
-    # Function/enum seperation
-    idx = -1
-    while (idx := idx + 1) < len(classifiers):
-        if classifiers[idx].type != "unknown":
-            continue
-        tokens = classifiers[idx].tokens
-        try:
-            pre = "[private|public] property|sub|function|enum"
-            i, j = find_section(tokens, pre, r"end property|sub|function|enum")
-            type_ = tokens[j - 1].text.lower()
-            type_ = "function" if type_ in ("sub", "property") else type_
-            extend_classification_list(
-                classifiers, idx, i, j, params2=VBASectionClassifier(type=type_)
-            )
-        except StopIteration:
-            break
-
-    # Declare/option/attribute separation (ends on newline or end of file)
-    idx = -1
-    while (idx := idx + 1) < len(classifiers):
-        if classifiers[idx].type != "unknown":
-            continue
-        tokens = classifiers[idx].tokens
-        try:
-            i, i0 = next(
-                match_tokens(
-                    tokens,
-                    "[private|public] declare|option|attribute",
-                    on_line_start=True,
-                )
-            )
-            try:
-                _, j = [x + i0 for x in next(match_tokens(tokens[i0:], r"\r\n"))]
-            except StopIteration:
-                j = len(tokens)
-
-            type_ = tokens[i0 - 1].text.lower()
-            extend_classification_list(
-                classifiers,
-                idx,
-                i,
-                j,
-                params2=VBASectionClassifier(
-                    type=type_, private=(tokens[i].text.lower() == "private")
-                ),
-            )
-        except StopIteration:
-            break
-
-    # Remove empty classifications
-    idx = -1
-    while (idx := idx + 1) < len(classifiers):
-        if not len(classifiers[idx].tokens):
-            classifiers.pop(idx)
-            idx -= 1
-
-    return classifiers
+    return [
+        VBASectionClassifier(
+            tokens=(t := tokens[idxes[0] : idxes[1]]),
+            type=type_,
+            origin=origin,
+            private=type != "unknown"
+            and "private" in (_.text.lower().strip() for _ in t[:2]),
+        )
+        for idxes, type_ in mixed.items()
+    ]
 
 
 def compile_bas_sources_into_single_file(
@@ -268,7 +285,7 @@ def compile_bas_sources_into_single_file(
                     if classifiers[idx].type != "unknown":
                         break
 
-    classifiers = reduce(operator.concat, classifiers_sources.values())
+    classifiers = reduce(operator.concat, classifiers_sources.values())  # noqa
 
     buckets = {
         "attribute": [],

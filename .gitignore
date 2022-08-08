@@ -132,3 +132,5 @@ dmypy.json
 *.idea
 test/temporary_output
 test/uncompiled-project/ExcelOut*.xlsb
+zebra_vba_packager/version.py
+scratch/

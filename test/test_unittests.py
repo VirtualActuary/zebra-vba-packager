@@ -1,3 +1,4 @@
+from pprint import pprint
 from textwrap import dedent
 
 import locate
@@ -87,9 +88,7 @@ class TestBasCombining(unittest.TestCase):
             [i.type for i in y],
         )
 
-        self.assertTrue(
-            "".join([tokens_to_str(i.tokens) for i in y]).replace("\r\n", "\n") == x
-        )
+        self.assertTrue("".join([tokens_to_str(i.tokens) for i in y]) == x)
 
     def test_compile_code_into_sections_ptrsafe(self):
         x = lstripdedent(
@@ -161,9 +160,24 @@ class TestBasCombining(unittest.TestCase):
             [i.type for i in y],
         )
 
-        self.assertTrue(
-            "".join([tokens_to_str(i.tokens) for i in y]).replace("\r\n", "\n") == x
+        self.assertTrue("".join([tokens_to_str(i.tokens) for i in y]) == x)
+
+    def test_underscore_names(self):
+        txt = lstripdedent(
+            """
+        Dim cn As WorkbookConnection
+        On Error GoTo err_
+        Application.Calculation = xlCalculationManual
+        Dim numConnections As Integer, i As Integer
+           End If
+        Next
+        GoTo done_
+        err_:
+        done_:
+        """
         )
+
+        self.assertEqual(tokens_to_str(tokenize(txt)), txt)
 
     def test_combine_bas_sources_into_single_file(self):
         sources = {
@@ -259,11 +273,6 @@ class TestBasCombining(unittest.TestCase):
                 Val2 = 5
             End Enum
             
-            '*************** MiscAssign
-            Private Function MiscAssign_Bla3()
-                MiscAssign_Bla3 = True
-            End Function
-            
             '*************** MiscArray
             ' Comment
             Private Function MiscArray_Bla(arr As Variant)
@@ -272,6 +281,11 @@ class TestBasCombining(unittest.TestCase):
             
             Private Function MiscArray_Bla2(arr As Variant)
                 MiscArray_Bla2 = True
+            End Function
+            
+            '*************** MiscAssign
+            Private Function MiscAssign_Bla3()
+                MiscAssign_Bla3 = True
             End Function
             
             """

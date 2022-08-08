@@ -2,31 +2,10 @@ import re
 from dataclasses import dataclass
 from functools import reduce
 import operator
-from typing import List
+from typing import List, Tuple
+from itertools import chain
 
-
-@dataclass
-class VBAToken:
-    text: str
-    type: str  # "name" "unknown"
-
-
-# from openpyxl/formula/tokenizer.py
-# Inside a string, all characters are treated as literals, except for
-# the quote character used to start the string. That character, when
-# doubled is treated as a single character in the string. If an
-# unmatched quote appears, the string is terminated.
-strre = re.compile('"(?:[^"]*"")*[^"]*"(?!")')
-namere = re.compile(r"([a-zA-Z0-9_][a-zA-Z0-9_]*)")
-
-# inline rem https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/rem-statement
-remcommentre = re.compile(r":[ \t]*[Rr][Ee][Mm][ \t].*")
-remcommentsolre = re.compile(r"[ \t]*[Rr][Ee][Mm][ \t].*")
-
-wspacere = re.compile(r"[ \t]*")
-
-# from https://github.com/rubberduck-vba/Rubberduck/issues/3175
-# Amended with some experimental findings of our own
+# https://github.com/rubberduck-vba/Rubberduck/issues/3175 amended with some experimental findings of our own
 vba_names = """
     Abs Access AddressOf Alias And Any Append Array As Assert Attribute B
     BF Base Binary Boolean ByRef ByVal Byte CBool CByte CCur CDate CDbl
@@ -55,42 +34,83 @@ vba_names = """
 
 vba_names_set = set([i.lower() for i in vba_names])
 
+linecont_re = re.compile("[\t ](_\n)")
+
+filler = r"nt ^()&-+*/=,.[]"
+
+filler_re_str = "^|" + ("|".join(["\\" + i for i in filler]))
+
+attribname_re = re.compile(
+    r'attribute[\t ]+vb_name[\t ]*=[\t ]*"([a-z][a-z0-9_]*)"', re.IGNORECASE
+)
+
+name_re = re.compile(rf"({filler_re_str})([a-zA-Z][a-zA-Z0-9_]*)")
+
+hashif_re = re.compile(
+    rf"({filler_re_str})((#if)|(#elseif)|(#else)|(#end[\t ].*if))", re.IGNORECASE
+)
+
+# from openpyxl/formula/tokenizer.py
+# Inside a string, all characters are treated as literals, except for
+# the quote character used to start the string. That character, when
+# doubled is treated as a single character in the string. If an
+# unmatched quote appears, the string is terminated.
+string_re = re.compile('"(?:[^"^\n]*"")*[^"^\n]*"(?!")')
+string_tmp_re = re.compile("࿓࿓*࿓")
+
+# https://docs.microsoft.com/en-us/office/vba/language/reference/user-interface-help/rem-statement
+comment_re = re.compile(r"(((')|(:[ \t]*rem[ \t])).*)($|\n)", re.IGNORECASE)
+
+commentrem_re = re.compile(r"(^|\n)[ \t]*(rem[ \t].*)($|\n)", re.IGNORECASE)
+
+# including line continuation underscores
+whitespace_re = re.compile(r"[ \t]+")
+
+newline_re = re.compile(r"\n")
+
+
+@dataclass
+class VBAToken:
+    text: str
+    type: str  # "name" "unknown"
+
 
 def prod(lst):
     return reduce(operator.mul, lst, 1)
 
 
-def re_idx(reg, s):
+def re_idx(reg, s, group_nr=0):
     """
     Get [i to j) index of regex expression
     """
-    return [(m.start(0), m.end(0)) for m in reg.finditer(s)]
+    return [(m.start(group_nr), m.end(group_nr)) for m in re.finditer(reg, s)]
 
 
-def names_idx(s):
-    """
-    Get [i to j) of names in regex expression: a to Z with numbers and _
-    excluding number nad _ as starting char
-    """
-    # remove names that starts with a number
-    idxes = [(i, j) for i, j in re_idx(namere, s) if not s[i] in "0123456789_"]
-    return idxes
+def replace_idx(s, idxes, replacements):
+    return replace_idx_with_char(s, idxes, with_)
 
 
-def fill_space(s, i, j):
-    """
-    Replace [i to j) slice in a string with empty space " "*len
-    """
-    return s[:i] + " " * (j - i) + s[j:]
+def replace_idx_with_char(s: str, idxes, with_=" ", invert=False):
+    assert len(with_) == 1
+
+    sparts = []
+    for (i, j), active in idx_sequencing(idxes, len(s)):
+        if (invert and active) or (not invert and not active):
+            sparts.append(s[i:j])
+        else:
+            sparts.append(with_ * (j - i))
+
+    return "".join(sparts)
 
 
-def idx_splitting(idxes, length):
-    flat_idxes = [outer for inner in idxes for outer in inner]
-    rets = []
-    for cnt, (i, j) in enumerate(zip([0] + flat_idxes, flat_idxes + [length])):
-        rets.append(((i, j), cnt % 2 != 0))
+def idx_sequencing(idxes: List[Tuple[int, int]], last):
+    jprev = 0
+    for i, j in idxes:
+        yield (jprev, i), False
+        yield (i, j), True
+        jprev = j
 
-    return rets
+    yield (jprev, last), False
 
 
 def tokenize(txt) -> List[VBAToken]:
@@ -101,12 +121,13 @@ def tokenize(txt) -> List[VBAToken]:
     :param txt: string consisting of VBA code
     :return: VBA tokens
 
-    >>> vba_txt = '''
-    ... Attribute VB_Name = "FileCompress" 'comment
+    >>> vba_txt = '''Attribute VB_Name = "FileCompress" 'comment
     ... Option Compare _
     ... Text
     ... Option Explicit
-    ...
+    ... ' This is a multiline _
+    ... comment
+    ... Dim a as String = "hello"
     ... ' Compression and decompression methods v1.1.1
     ... #If EarlyBinding = False Then
     ...     Public Enum IOMode
@@ -118,200 +139,58 @@ def tokenize(txt) -> List[VBAToken]:
     ... '''
 
     >>> tokens = tokenize(vba_txt)
-    >>> "".join([i.text for i in tokenize(vba_txt)]).replace("\r", "") == vba_txt
+    >>> "".join([i.text for i in tokens]) == vba_txt
     True
 
     """
 
+    idxmap = {}
+    txt = txt.replace("\r\n", "\n")
+    lower = txt.lower()
+    s = txt
+
+    # Legacy hack to make xxx in 'attribute vb_name = "xxx"' a name and not a string for easier replacement
+    if idx := re_idx(attribname_re, s, 1):
+        i, j = idx[0]
+        idxmap[(i, j)] = "name"
+        s = s[: i - 1] + "·" * (j - i + 2) + s[j + 1 :]
+
+    # Protect possible string entries with strange characters ࿓࿓...࿓
+    s = replace_idx_with_char(s, re_idx(string_re, s), with_="࿓")
+
+    # Replace line continuation with spaces (after strings have been stripped)
+    s = replace_idx_with_char(s, re_idx(linecont_re, s, 1))
+
+    s = replace_idx_with_char(
+        s, comment_idx := list(re_idx(comment_re, s, 1)), with_="·"
+    )
+    idxmap.update((i, "comment") for i in comment_idx)
+
+    s = replace_idx_with_char(
+        s, commentrem_idx := list(re_idx(commentrem_re, s, 2)), with_="·"
+    )
+    idxmap.update((i, "comment") for i in commentrem_idx)
+
+    s = replace_idx_with_char(s, hashif_idx := list(re_idx(hashif_re, s, 2)), with_="·")
+    idxmap.update((i, "#if") for i in hashif_idx)
+
+    # search all ࿓࿓...࿓ entries
+    idxmap.update((i, "string") for i in re_idx(string_tmp_re, s))
+    idxmap.update((i, "space") for i in re_idx(whitespace_re, s))
+    idxmap.update(
+        (i, "name" if lower[i[0] : i[1]] not in vba_names_set else "reserved")
+        for i in list(re_idx(name_re, s, 2))
+    )
+    idxmap.update((i, "newline") for i in list(re_idx(newline_re, s, 0)))
+
     tokens = []
-    lines = txt.split("\n")
-
-    for lidx, line in enumerate(txt.split("\n")):
-        line_tokens = []
-
-        # Find string candidates
-        for (i, j), is_str in idx_splitting(re_idx(strre, line), len(line)):
-            line_tokens.append(
-                VBAToken(text=line[i:j], type=("string" if is_str else "unknown"))
-            )
-
-        # Find comment candidates (and retrofix "strings" within comments)
-        for i in range(len(line_tokens)):
-            if line_tokens[i].type == "unknown":
-                ttxt = line_tokens[i].text
-
-                # Find rem-type comment
-                if (
-                    (remidx := re_idx(remcommentsolre, ttxt))
-                    and len(remidx) == 1
-                    and remidx[0][0] == [0]
-                ):
-                    remidx = remidx
-                elif (remidx := re_idx(remcommentre, ttxt)) and len(remidx) == 1:
-                    remidx = remidx
-                else:
-                    remidx = None
-
-                # ren-type comments
-                if remidx is not None:
-                    il, jl = 0, remidx[0][0]
-                    ir, jr = remidx[0][0], len(ttxt)
-
-                    lhs = ttxt[il:jl]
-                    rhs = ttxt[ir:jr] + "".join([i.text for i in line_tokens[i + 1 :]])
-
-                    line_tokens = line_tokens[:i]
-                    line_tokens.append(VBAToken(text=lhs, type="unknown"))
-                    line_tokens.append(VBAToken(text=rhs, type="comment"))
-                    break
-
-                # '-type comments
-                elif "'" in ttxt:
-                    lhs = ttxt[: ttxt.find("'")]
-                    rhs = ttxt[ttxt.find("'") :] + "".join(
-                        [i.text for i in line_tokens[i + 1 :]]
-                    )
-
-                    line_tokens = line_tokens[:i]
-                    line_tokens.append(VBAToken(text=lhs, type="unknown"))
-                    line_tokens.append(VBAToken(text=rhs, type="comment"))
-                    break
-
-        # find names and (reserved keywords)
-        i = -1
-        while (i := i + 1) < len(line_tokens):
-            if line_tokens[i].type == "unknown":
-                t = line_tokens.pop(i)
-                j = -1
-                for (ii, jj), is_name in idx_splitting(names_idx(t.text), len(t.text)):
-                    j += 1
-                    ttxt = t.text[ii:jj]
-                    if is_name:
-                        if ttxt.lower() not in vba_names_set:
-                            ttype = "name"
-                        else:
-                            ttype = "reserved"
-                    else:
-                        ttype = "unknown"
-
-                    line_tokens.insert(i + j, VBAToken(text=ttxt, type=ttype))
-                i = i + j
-
-        tokens.extend(line_tokens)
-        tokens.append(VBAToken(text="\r\n", type="newline"))
-    tokens = tokens[:-1]  # remove last newline
-
-    # Whitespace tokens
-    i = -1
-    while (i := i + 1) < len(tokens):
-        if tokens[i].type == "unknown":
-            t = tokens.pop(i)
-            j = -1
-            for (ii, jj), is_wspace in idx_splitting(
-                re_idx(wspacere, t.text), length=len(t.text)
-            ):
-                j += 1
-                tokens.insert(
-                    i + j,
-                    VBAToken(
-                        text=t.text[ii:jj], type="space" if is_wspace else "unknown"
-                    ),
-                )
-            i = i + j
-
-    # Line continuation
-    i = -1
-    while (i := i + 1) < len(tokens):
-        if tokens[i].type == "unknown":
-            if tokens[i].text.endswith("_"):
-                j = i
-                while (j := j + 1) < len(tokens):
-                    if tokens[j].type == "newline":
-                        break
-
-                if prod([i.type == "space" for i in tokens[i + 1 : j - 1]]):
-                    t = tokens.pop(i)
-                    tokens.insert(
-                        i, VBAToken(text=t.text.rsplit("_", 1)[0], type=t.type)
-                    )
-
-                    ttxt = "_" + t.text.rsplit("_", 1)[1]
-                    for t in tokens[i + 1 : j + 1]:
-                        tokens.pop(i + 1)
-                        ttxt = ttxt + t.text
-
-                    tokens.insert(i + 1, VBAToken(text=ttxt, type="space"))
-
-    # Filter out empty tokens
-    tokens = [i for i in tokens if i.text != ""]
-
-    # Merge spaces together
-    i = -1
-    while (i := i + 1) < len(tokens):
-        if (
-            tokens[i].type == "space"
-            and i + 1 < len(tokens)
-            and tokens[i + 1].type == "space"
-        ):
-            tokens[i].text = tokens[i].text + tokens[i + 1].text
-            tokens.pop(i + 1)
-            i = i - 1
-
-    # Collect '#IF', '#ElseIf', '#Else', and '#End If' token names
-    i = -1
-    while (i := i + 1) < len(tokens):
-        if (
-            tokens[i].text == "#"
-            and tokens[i].type == "unknown"
-            and i + 1 < len(tokens)
-            and tokens[i + 1].type == "reserved"
-            and tokens[i + 1].text.lower() in ("if", "elseif", "else", "end")
-        ):
-            tokens[i].text = tokens[i].text + tokens[i + 1].text
-            tokens[i].type = "#if"
-            tokens.pop(i + 1)
-
-            if tokens[i].text.lower() == "#end":
-                if (
-                    i + 1 < len(tokens)
-                    and tokens[i + 1].type == "space"
-                    and i + 2 < len(tokens)
-                    and tokens[i + 2].text.lower() == "if"
-                ):
-
-                    tokens[i].text = (
-                        tokens[i].text + tokens[i + 1].text + tokens[i + 2].text
-                    )
-                    tokens.pop(i + 1)
-                    tokens.pop(i + 1)
-                    i = i - 2
-            i = i - 1
-
-    # Fix `Attribute VB_Name = "..."` to allow ... to be used as a name
-    i = -1
-    while (i := i + 1) < len(tokens):
-        t = tokens[i]
-        if (
-            i + 2 < len(tokens)
-            and t.type == "reserved"
-            and t.text.lower() == "attribute"
-            and tokens[i + 1].type == "space"
-            and tokens[i + 2].type == "reserved"
-            and tokens[i + 2].text.lower() == "vb_name"
-        ):
-
-            is_vbname = False
-            j = i + 2
-
-            # lookforward for vb_name value as a string
-            while (j := j + 1) < len(tokens) and tokens[j].type != "newline":
-                if tokens[j].type == "string":
-                    mid = tokens[j].text[1:-1]
-                    tokens.pop(j)
-                    tokens.insert(j + 0, VBAToken(text='"', type="unknown"))
-                    tokens.insert(j + 1, VBAToken(text=mid, type="name"))
-                    tokens.insert(j + 2, VBAToken(text='"', type="unknown"))
-                    break
+    for (i, j), known in idx_sequencing(sorted(idxmap), len(s)):
+        if i == j:
+            continue
+        if known:
+            tokens.append(VBAToken(text=txt[i:j], type=idxmap[(i, j)]))
+        else:
+            tokens.append(VBAToken(text=txt[i:j], type="unknown"))
 
     return tokens
 
