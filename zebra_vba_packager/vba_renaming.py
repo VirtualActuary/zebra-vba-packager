@@ -3,7 +3,7 @@ from copy import deepcopy
 from textwrap import dedent
 from types import SimpleNamespace
 from typing import List
-
+from .exceptions import ModuleNameError
 from .match_tokens import match_tokens
 from .vba_tokenizer import tokenize, VBAToken, tokens_to_str
 from pathlib import Path
@@ -107,6 +107,10 @@ def cls_renaming_dict(dirname, user_name_transformer):
             modname = vba_module_name(value)
             if not user_name_transformer.match(modname):
                 if not modname.startswith("z_"):
+                    if len(f"z_{modname}") > 31:
+                        raise ModuleNameError(
+                            f"Tried to create a module name larger that 31 characters: z_{modname}"
+                        )
                     d[modname] = f"z_{modname}"
 
     return d
