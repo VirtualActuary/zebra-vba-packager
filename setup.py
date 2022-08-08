@@ -32,5 +32,5 @@ setuptools.setup(
     setup_requires=[
         "setuptools_scm",
     ],
-    install_requires=["locate", "download", "pathvalidate", "py7zr", "deprecation"],
+    install_requires=["locate", "download", "pathvalidate", "py7zr", "deprecation", "sortedcontainers"],
 )
