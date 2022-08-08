@@ -64,7 +64,7 @@ comment_re = re.compile(r"(((')|(:[ \t]*rem[ \t])).*)($|\n)", re.IGNORECASE)
 commentrem_re = re.compile(r"(^|\n)[ \t]*(rem[ \t].*)($|\n)", re.IGNORECASE)
 
 # including line continuation underscores
-whitespace_re = re.compile(r"([ \t]|([ \t]_\n))+")
+whitespace_re = re.compile(r"[ \t]+")
 
 newline_re = re.compile(r"\n")
 
@@ -86,7 +86,11 @@ def re_idx(reg, s, group_nr=0):
     return [(m.start(group_nr), m.end(group_nr)) for m in re.finditer(reg, s)]
 
 
-def replace_idx(s: str, idxes, with_=" ", invert=False):
+def replace_idx(s, idxes, replacements):
+    return replace_idx_with_char(s, idxes, with_)
+
+
+def replace_idx_with_char(s: str, idxes, with_=" ", invert=False):
     assert len(with_) == 1
 
     sparts = []
@@ -145,25 +149,29 @@ def tokenize(txt) -> List[VBAToken]:
     lower = txt.lower()
     s = txt
 
-    # Hack to make xxx in 'attribute vb_name = "xxx"' a name and not a string
+    # Legacy hack to make xxx in 'attribute vb_name = "xxx"' a name and not a string for easier replacement
     if idx := re_idx(attribname_re, s, 1):
         i, j = idx[0]
         idxmap[(i, j)] = "name"
         s = s[: i - 1] + "·" * (j - i + 2) + s[j + 1 :]
 
-    # Protect possible string entries with ࿓࿓...࿓
-    s = replace_idx(s, re_idx(string_re, s), with_="࿓")
+    # Protect possible string entries with strange characters ࿓࿓...࿓
+    s = replace_idx_with_char(s, re_idx(string_re, s), with_="࿓")
 
-    # Replace line continuation with spaces (after string search)
-    s = replace_idx(s, re_idx(linecont_re, s, 1))
+    # Replace line continuation with spaces (after strings have been stripped)
+    s = replace_idx_with_char(s, re_idx(linecont_re, s, 1))
 
-    s = replace_idx(s, comment_idx := list(re_idx(comment_re, s, 1)), with_="·")
+    s = replace_idx_with_char(
+        s, comment_idx := list(re_idx(comment_re, s, 1)), with_="·"
+    )
     idxmap.update((i, "comment") for i in comment_idx)
 
-    s = replace_idx(s, commentrem_idx := list(re_idx(commentrem_re, s, 2)), with_="·")
+    s = replace_idx_with_char(
+        s, commentrem_idx := list(re_idx(commentrem_re, s, 2)), with_="·"
+    )
     idxmap.update((i, "comment") for i in commentrem_idx)
 
-    s = replace_idx(s, hashif_idx := list(re_idx(hashif_re, s, 2)), with_="·")
+    s = replace_idx_with_char(s, hashif_idx := list(re_idx(hashif_re, s, 2)), with_="·")
     idxmap.update((i, "#if") for i in hashif_idx)
 
     # search all ࿓࿓...࿓ entries
