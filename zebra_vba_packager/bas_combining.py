@@ -4,6 +4,7 @@ from itertools import chain
 from pathlib import Path
 from contextlib import suppress
 from textwrap import indent
+from types import SimpleNamespace as SN
 from typing import Dict, Union, List
 from functools import reduce
 import operator
@@ -93,20 +94,32 @@ def find_all_hashif_sections(tokens):
 
 
 def find_all_function_sections(tokens):
+    type_map = {
+        "property": "function",
+        "sub": "function",
+        "function": "function",
+        "enum": "enum",
+    }
+
     sections = {}
-    start = 0
-    while True:
+    for i, i0 in match_tokens(
+        tokens,
+        "[private|public] property|sub|function|enum",
+        on_line_start=True,
+    ):
+
         try:
-            pre = "[private|public] property|sub|function|enum"
-            i, j = find_section(tokens[start:], pre, r"end property|sub|function|enum")
-            sections[(start + i, start + j)] = (
-                "function"
-                if (type_ := tokens[start + j - 1].text.lower()) in ("sub", "property")
-                else type_
+            j = (
+                i0
+                + next(match_tokens(tokens[i0:], r"end property|sub|function|enum"))[1]
             )
-            start += j
+
         except StopIteration:
-            break
+            j = len(tokens)
+
+        sections[(i, j)] = type_map[
+            first({_.text.lower() for _ in tokens[i : i + 3]}.intersection(type_map))
+        ]
 
     return sections
 
@@ -118,28 +131,26 @@ def find_all_declaration_sections(tokens):
         "[private|public] declare|option|attribute",
         on_line_start=True,
     ):
-        j = len(tokens)
-        with suppress(StopIteration):
+        try:
             j = i0 + next(match_tokens(tokens[i0:], r"\n"))[1]
+        except StopIteration:
+            j = len(tokens)
 
         sections[(i, j)] = tokens[i0 - 1].text.lower()
+
     return sections
 
 
 def find_all_global_var_sections(tokens):
-    sections = {}
-    for i, i0 in match_tokens(
-        tokens,
-        "[private|public|dim] .* as [new] .*",
-        on_line_start=True,
-    ):
-        j = len(tokens)
-        with suppress(StopIteration):
-            j = i0 + next(match_tokens(tokens[i0:], r"\n"))[1]
-
-        sections[(i, j)] = "unknown"
-
-    return sections
+    return {
+        tuple(idx): "unknown"
+        for idx in match_tokens(
+            tokens,
+            "[private|public|dim] .* as [new] .*",
+            on_line_start=True,
+            on_line_end=True,
+        )
+    }
 
 
 def compile_code_into_sections(
@@ -172,7 +183,7 @@ def compile_code_into_sections(
             key_new = (keys[i][0], max(keys[i][1], keys[i + 1][1]))
 
             mixed[key_new] = mixed.pop(keys[i])
-            mixed.pop(keys[i+1])
+            mixed.pop(keys[i + 1])
 
             keys_sets[i] = set(range(*key_new))
             keys_sets.pop(i + 1)

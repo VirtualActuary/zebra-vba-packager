@@ -22,29 +22,38 @@ def _str_to_matchables(s):
 
 
 def match_tokens(
-    tokens: List[VBAToken], custom_token_match_string, on_line_start=False
+    tokens: List[VBAToken],
+    custom_token_match_string,
+    on_line_start=False,
+    on_line_end=False,
 ):
     matchables = _str_to_matchables(custom_token_match_string)
 
     # Pretend that tokens[-1] is a newline
     def token_at(i):
-        return tokens[i] if i >= 0 else VBAToken(type="newline", text="\n")
+        return (
+            tokens[i]
+            if (i >= 0 and i < len(tokens))
+            else VBAToken(type="newline", text="\n")
+        )
 
     # For on_line_start start at tokens[-1] and inject first match as =="\r\n"
+    i = -1
     if on_line_start:
         matchables.insert(0, SN(optional=False, re=SN(match=lambda x: x == "\n")))
         i = -2
-    else:
-        i = -1
+    if on_line_end:
+        matchables.append(SN(optional=False, re=SN(match=lambda x: x == "\n")))
 
-    while (i := i + 1) < len(tokens):
+    t_len = len(tokens) + on_line_end
+    while (i := i + 1) < t_len:
         if token_at(i).type == "space":
             continue
 
         matched = 1  # 1 = ongoing
         k = -1
         j = i - 1
-        while (j := j + 1) < len(tokens) and k < len(matchables):
+        while (j := j + 1) < t_len and k < len(matchables):
             if token_at(j).type == "space":
                 continue
 
