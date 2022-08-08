@@ -4,6 +4,7 @@ from itertools import chain
 from pathlib import Path
 from contextlib import suppress
 from textwrap import indent
+from types import SimpleNamespace as SN
 from typing import Dict, Union, List
 from functools import reduce
 import operator
@@ -118,26 +119,26 @@ def find_all_declaration_sections(tokens):
         "[private|public] declare|option|attribute",
         on_line_start=True,
     ):
-        j = len(tokens)
-        with suppress(StopIteration):
+        try:
             j = i0 + next(match_tokens(tokens[i0:], r"\n"))[1]
+        except StopIteration:
+            j = len(tokens)
 
         sections[(i, j)] = tokens[i0 - 1].text.lower()
+
     return sections
 
 
 def find_all_global_var_sections(tokens):
-    sections = {}
-    for i, i0 in match_tokens(
-        tokens,
-        "[private|public|dim] .* as [new] .*",
-        on_line_start=True,
-    ):
-        j = len(tokens)
-        with suppress(StopIteration):
-            j = i0 + next(match_tokens(tokens[i0:], r"\n"))[1]
-
-        sections[(i, j)] = "unknown"
+    sections = {
+        tuple(idx): "global"
+        for idx in match_tokens(
+            tokens,
+            "[private|public|dim] .* as [new] .*",
+            on_line_start=True,
+            on_line_end=True,
+        )
+    }
 
     return sections
 
@@ -291,6 +292,7 @@ def compile_bas_sources_into_single_file(
         "attribute": [],
         "option": [],
         "declare": [],
+        "global": [],
         "other": [],
         "function": [],
     }
