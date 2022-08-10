@@ -7,6 +7,7 @@ import sys
 import tempfile
 import time
 import uuid
+from charset_normalizer import from_path
 from pathlib import Path
 from typing import Iterable, Union, Callable, Any
 from .excel_compilation import is_locked
@@ -173,3 +174,7 @@ def get_matching_file_patterns(path, glob_include, glob_exclude=None):
                 file_matches.discard(i)
 
     return file_matches
+
+
+def read_txt(fname):
+    return str(from_path(fname).best())

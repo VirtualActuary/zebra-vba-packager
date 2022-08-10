@@ -69,10 +69,9 @@ def compile_xl(src_dir, dst_file=None):
         # Ensure all .txt, .bas and .cls files have 'lrln' line endings
         for patt in ["*.txt", "*.bas", "*.cls"]:
             for f in Path(src_dir_tmp).rglob(patt):
-                with f.open("rb") as fr:
-                    txt = fr.read()
-                with f.open("wb") as fw:
-                    fw.write(txt.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+                txt = util.read_txt(f)
+                with f.open("w") as fw:
+                    fw.write(util.to_unix_line_endings(txt))
 
         subprocess.check_output(
             ["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)]

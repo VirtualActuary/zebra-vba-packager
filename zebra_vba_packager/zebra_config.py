@@ -256,8 +256,7 @@ class Config:
                 )
                 sources = {}
                 for f in Path(source.temp_transformed).rglob("*.bas"):
-                    with f.open("r") as rf:
-                        sources[f] = rf.read()
+                    sources[f] = util.read_txt(f)
 
                 if len(sources):
                     txt = compile_bas_sources_into_single_file(
@@ -266,8 +265,8 @@ class Config:
                     for i in sources:
                         i.unlink()
 
-                    with first(sources).open("wb") as fw:
-                        fw.write(txt.encode("utf-8"))
+                    with first(sources).open("w") as fw:
+                        fw.write(txt)
 
             if source.auto_bas_namespace:
                 bas_create_namespaced_classes(source.temp_transformed)
@@ -295,7 +294,7 @@ class Config:
 
                 reli = i.relative_to(source.temp_transformed)
                 if str(reli).lower()[-4:] in (".cls", ".bas"):
-                    modname = vba_module_name(tokenize(i.open().read()))
+                    modname = vba_module_name(tokenize(util.read_txt(tokenize(i))))
                     dst = output_dir.joinpath(modname + str(reli).lower()[-4:])
                 else:
                     dst = output_dir.joinpath(reli)
@@ -314,8 +313,7 @@ class Config:
         for i in output_dir.rglob("*.cls"):
 
             if i.name.startswith("z__") and i.name.lower().endswith(".cls"):
-                with i.open() as f:
-                    txt = f.read()
+                txt = util.read_txt(i)
 
                 namespace_declarations_not_empty = True
                 mpair = _ModnamePair.from_str(txt)
