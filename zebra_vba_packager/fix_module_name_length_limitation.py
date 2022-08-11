@@ -1,9 +1,10 @@
 from __future__ import annotations
 import dataclasses
 import re
-from itertools import chain
 from pathlib import Path
 from typing import Optional
+
+from .util import read_txt, write_txt
 
 re_modname = re.compile(
     r'^\s*Attribute\s*VB_Name\s*=\s*"(.*)"', re.IGNORECASE | re.MULTILINE
@@ -17,8 +18,7 @@ def fix_module_name_length_limitation(dirpath):
     """ """
     modname_reuse = set()
     for p in sorted(Path(dirpath).rglob("*.cls")):
-        with p.open("r") as f:
-            txt = f.read()
+        txt = read_txt(p)
 
         i, j = re_modname.search(txt).span(1)
         modname = txt[i:j]
@@ -30,9 +30,8 @@ def fix_module_name_length_limitation(dirpath):
                 while mpair.modname in modname_reuse:
                     mpair.suffix += 1
                 modname_reuse.add(mpair.modname)
+                write_txt(p, mpair.inject_into(txt))
 
-                with p.open("w") as f:
-                    f.write(mpair.inject_into(txt))
 
 
 @dataclasses.dataclass

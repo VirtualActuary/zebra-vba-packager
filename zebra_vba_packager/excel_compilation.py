@@ -70,8 +70,7 @@ def compile_xl(src_dir, dst_file=None):
         for patt in ["*.txt", "*.bas", "*.cls"]:
             for f in Path(src_dir_tmp).rglob(patt):
                 txt = util.read_txt(f)
-                with f.open("w") as fw:
-                    fw.write(util.to_unix_line_endings(txt))
+                util.write_txt(f, txt)
 
         subprocess.check_output(
             ["cscript", "//nologo", str(_compile_vbs), str(src_dir_tmp)]

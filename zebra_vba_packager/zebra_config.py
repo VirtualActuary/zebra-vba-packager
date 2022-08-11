@@ -265,8 +265,7 @@ class Config:
                     for i in sources:
                         i.unlink()
 
-                    with first(sources).open("w") as fw:
-                        fw.write(txt)
+                    util.write_txt(first(sources), txt)
 
             if source.auto_bas_namespace:
                 bas_create_namespaced_classes(source.temp_transformed)
@@ -294,7 +293,7 @@ class Config:
 
                 reli = i.relative_to(source.temp_transformed)
                 if str(reli).lower()[-4:] in (".cls", ".bas"):
-                    modname = vba_module_name(tokenize(util.read_txt(tokenize(i))))
+                    modname = vba_module_name(tokenize(util.read_txt(i)))
                     dst = output_dir.joinpath(modname + str(reli).lower()[-4:])
                 else:
                     dst = output_dir.joinpath(reli)
