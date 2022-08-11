@@ -181,8 +181,8 @@ def flatten_2d_list(l):
 
 
 def read_txt(fname):
-    return Path(fname).read_text()
+    return Path(fname).read_text(encoding="latin-1")
 
 
 def write_txt(fname, txt):
-    Path(fname).write_text(txt)
+    Path(fname).write_text(txt, encoding="latin-1")
