@@ -173,3 +173,15 @@ def get_matching_file_patterns(path, glob_include, glob_exclude=None):
                 file_matches.discard(i)
 
     return file_matches
+
+
+def flatten_2d_list(l):
+    return [item for sublist in l for item in sublist]
+
+
+def read_txt(fname):
+    return Path(fname).read_text(encoding="latin-1")
+
+
+def write_txt(fname, txt):
+    Path(fname).write_text(txt, encoding="latin-1")

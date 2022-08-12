@@ -3,6 +3,8 @@ from copy import deepcopy
 from textwrap import dedent
 from types import SimpleNamespace
 from typing import List
+
+from .util import read_txt, write_txt
 from .exceptions import ModuleNameError
 from .match_tokens import match_tokens
 from .vba_tokenizer import tokenize, VBAToken, tokens_to_str
@@ -54,16 +56,14 @@ class NameTransformer:
 
 
 def write_tokens(fname, tokens):
-    with fname.open("wb") as f:
-        f.write(("".join([i.text for i in tokens]).lstrip()).encode("utf-8"))
+    write_txt(fname, "".join([i.text for i in tokens]).lstrip())
 
 
 def vba_directory_mapping(dirname):
 
     files_to_tokens = {}
     for i in list(Path(dirname).rglob("*.bas")) + list(Path(dirname).rglob("*.cls")):
-        with i.open("r") as f:
-            files_to_tokens[i] = tokenize(f.read())
+        files_to_tokens[i] = tokenize(read_txt(i))
 
     return files_to_tokens
 
