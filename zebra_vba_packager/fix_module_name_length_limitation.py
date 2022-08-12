@@ -33,7 +33,6 @@ def fix_module_name_length_limitation(dirpath):
                 write_txt(p, mpair.inject_into(txt))
 
 
-
 @dataclasses.dataclass
 class _ModnamePair:
     """
