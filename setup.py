@@ -39,6 +39,5 @@ setuptools.setup(
         "py7zr",
         "deprecation",
         "sortedcontainers",
-        "charset-normalizer"
     ],
 )

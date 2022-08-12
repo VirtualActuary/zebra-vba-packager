@@ -7,7 +7,6 @@ import sys
 import tempfile
 import time
 import uuid
-from charset_normalizer import from_path
 from pathlib import Path
 from typing import Iterable, Union, Callable, Any
 from .excel_compilation import is_locked
