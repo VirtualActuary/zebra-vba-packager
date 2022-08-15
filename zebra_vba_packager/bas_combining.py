@@ -12,7 +12,7 @@ from sortedcontainers import SortedDict
 
 from .match_tokens import match_tokens
 from .vba_renaming import vba_module_name
-from .util import first, to_unix_line_endings, to_dos_line_endings
+from .util import first, to_unix_line_endings
 from .vba_tokenizer import VBAToken, tokenize, tokens_to_str
 
 
@@ -314,7 +314,6 @@ def compile_bas_sources_into_single_file(
             continue
 
         for i in vals:
-
             block_str = to_unix_line_endings(tokens_to_str(i.tokens)).strip()
             if block_str != "":
                 block_str = block_str + "\n\n"
@@ -330,4 +329,4 @@ def compile_bas_sources_into_single_file(
 
     code.insert(0, f'Attribute VB_Name = "{module_name}"\n')
 
-    return to_dos_line_endings("".join(code))
+    return "".join(code)

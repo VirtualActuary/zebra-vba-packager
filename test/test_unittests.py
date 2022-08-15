@@ -3,7 +3,7 @@ from textwrap import dedent
 
 import locate
 import unittest
-
+from pathlib import Path
 
 with locate.prepend_sys_path(".."):
     from zebra_vba_packager.bas_combining import (
@@ -13,6 +13,7 @@ with locate.prepend_sys_path(".."):
     from zebra_vba_packager.vba_tokenizer import tokens_to_str, tokenize
     from zebra_vba_packager.match_tokens import match_tokens
     from zebra_vba_packager.util import to_unix_line_endings
+    from zebra_vba_packager import Source, Config
 
 
 def lstripdedent(s):
@@ -320,6 +321,32 @@ class TestBasCombining(unittest.TestCase):
         )
 
         self.assertEqual(txt1, txt2)
+
+
+class TestFullRun(unittest.TestCase):
+    def test_github_download_and_combine(self):
+        Config(
+            Source(
+                git_source="https://github.com/VirtualActuary/MiscVBAFunctions.git",
+                git_rev="8e5e8f3",
+                glob_include=[
+                    "MiscVBAFunctions/**/*.bas",
+                    "MiscVBAFunctions/**/*.cls",
+                    "**/thisworkbook.txt",
+                ],
+                glob_exclude=["**/Test__*"],
+                combine_bas_files="Fn",
+                auto_bas_namespace=True,
+                auto_cls_rename=False,
+            )
+        ).run(git_dir := Path(locate.this_dir(), "temporary_output/misc-vba-git"))
+
+        tmp_dir = Path(locate.this_dir(), "misc-vba-git-comparison")
+
+        self.assertEqual(
+            Path(git_dir, "z__Fn.cls").read_text(),
+            Path(tmp_dir, "z__Fn.cls").read_text(),
+        )
 
 
 if __name__ == "__main__":
