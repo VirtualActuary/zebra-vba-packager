@@ -7,6 +7,7 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = True
+'zebra source MiscVBAFunctions#8e5e8f3
 
 ' Use a* so this is on top of the fn. MiscF library
 

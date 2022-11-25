@@ -29,7 +29,6 @@ def working_directory(path):
 
 
 def sh_lines(command, **kwargs):
-    shell = isinstance(command, str)
     lst = (
         subprocess.check_output(command, shell=isinstance(command, str), **kwargs)
         .decode("utf-8")
