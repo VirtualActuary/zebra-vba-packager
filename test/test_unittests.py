@@ -1,3 +1,5 @@
+import re
+import tempfile
 from pprint import pprint
 from textwrap import dedent
 
@@ -348,6 +350,57 @@ class TestFullRun(unittest.TestCase):
             Path(tmp_dir, "z__Fn.cls").read_text(),
         )
 
+    def test_github_history(self):
+        git_source = locate.this_dir().joinpath("misc-vba-git-history-example")
+        git_ref = "eac3bbac2faa5b40db766d439ebac06d0638f1c1"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            Config(
+                Source(
+                    git_source=str(git_source),
+                    git_rev=git_ref,
+                    glob_include=["*same_source/*.bas"],
+                    combine_bas_files="XXX",
+                    auto_bas_namespace=True,
+                )
+            ).run(tmpdir)
+
+            zebra_lines = [
+                i
+                for i in list(Path(tmpdir).rglob("*.cls"))[0].read_text().splitlines()
+                if i.startswith("'zebra")
+            ]
+            self.assertEqual(
+                [
+                    "'zebra source misc-vba-git-history-example#eac3bba <- i_am_from_another_repo#1234567"
+                ],
+                zebra_lines,
+            )
+
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            Config(
+                Source(
+                    git_source=str(git_source),
+                    git_rev=git_ref,
+                    glob_include=["*different_source/*.bas"],
+                    combine_bas_files="XXX",
+                    auto_bas_namespace=True,
+                )
+            ).run(tmpdir)
+
+            zebra_lines = [
+                i
+                for i in list(Path(tmpdir).rglob("*.cls"))[0].read_text().splitlines()
+                if i.startswith("'zebra")
+            ]
+
+            self.assertEqual(
+                [
+                    "'zebra source misc-vba-git-history-example#eac3bba <- ..."
+                ],
+                zebra_lines,
+            )
 
 if __name__ == "__main__":
     import unittest

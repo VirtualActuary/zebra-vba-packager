@@ -44,7 +44,7 @@ def expand_zebra_refs(txt, new_repo, new_ref):
     )
 
     # Expand sourcelist to keep a chain of repo links
-    if sourcelist and (new_item.rsplit("")[0] == sourcelist[0].rsplit("")[0]):
+    if sourcelist and (new_item.rsplit("#")[0] == sourcelist[0].rsplit("#")[0]):
         sourcelist = [new_item] + sourcelist[1:]
     else:
         sourcelist = [new_item] + sourcelist
