@@ -377,7 +377,6 @@ class TestFullRun(unittest.TestCase):
                 zebra_lines,
             )
 
-
         with tempfile.TemporaryDirectory() as tmpdir:
             Config(
                 Source(
@@ -396,11 +395,10 @@ class TestFullRun(unittest.TestCase):
             ]
 
             self.assertEqual(
-                [
-                    "'zebra source misc-vba-git-history-example#eac3bba <- ..."
-                ],
+                ["'zebra source misc-vba-git-history-example#eac3bba <- ..."],
                 zebra_lines,
             )
+
 
 if __name__ == "__main__":
     import unittest
