@@ -1,3 +1,5 @@
+import re
+import tempfile
 from pprint import pprint
 from textwrap import dedent
 
@@ -347,6 +349,88 @@ class TestFullRun(unittest.TestCase):
             Path(git_dir, "z__Fn.cls").read_text(),
             Path(tmp_dir, "z__Fn.cls").read_text(),
         )
+
+    def test_github_history(self):
+        git_source = locate.this_dir().joinpath("misc-vba-git-history-example")
+        git_ref = "eac3bbac2faa5b40db766d439ebac06d0638f1c1"
+        git_add_version_comment_params = [None, True, False]  # None defaults to True
+
+        for git_add_version_comment in git_add_version_comment_params:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                Config(
+                    Source(
+                        git_source=str(git_source),
+                        git_rev=git_ref,
+                        git_add_version_comment=git_add_version_comment,
+                        glob_include=["*same_source/*.bas"],
+                        combine_bas_files="XXX",
+                        auto_bas_namespace=True,
+                    )
+                ).run(tmpdir)
+
+                zebra_lines = [
+                    i
+                    for i in list(Path(tmpdir).rglob("*.cls"))[0]
+                    .read_text()
+                    .splitlines()
+                    if i.startswith("'zebra")
+                ]
+
+                if git_add_version_comment == False:
+                    self.assertEqual(
+                        [
+                            git_add_version_comment,
+                            "'zebra source i_am_from_another_repo#1234567",
+                            "'zebra source i_am_from_another_repo#1234567",
+                        ],
+                        [git_add_version_comment] + zebra_lines,
+                    )
+                else:
+                    self.assertEqual(
+                        [
+                            git_add_version_comment,
+                            "'zebra source misc-vba-git-history-example#eac3bba <- i_am_from_another_repo#1234567",
+                        ],
+                        [git_add_version_comment] + zebra_lines,
+                    )
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                Config(
+                    Source(
+                        git_source=str(git_source),
+                        git_rev=git_ref,
+                        git_add_version_comment=git_add_version_comment,
+                        glob_include=["*different_source/*.bas"],
+                        combine_bas_files="XXX",
+                        auto_bas_namespace=True,
+                    )
+                ).run(tmpdir)
+
+                zebra_lines = [
+                    i
+                    for i in list(Path(tmpdir).rglob("*.cls"))[0]
+                    .read_text()
+                    .splitlines()
+                    if i.startswith("'zebra")
+                ]
+
+                if git_add_version_comment == False:
+                    self.assertEqual(
+                        [
+                            git_add_version_comment,
+                            "'zebra source i_am_from_another_repo#1234567",
+                            "'zebra source i_am_from_yet_another_repo#1234567",
+                        ],
+                        [git_add_version_comment] + zebra_lines,
+                    )
+                else:
+                    self.assertEqual(
+                        [
+                            git_add_version_comment,
+                            "'zebra source misc-vba-git-history-example#eac3bba <- ...",
+                        ],
+                        [git_add_version_comment] + zebra_lines,
+                    )
 
 
 if __name__ == "__main__":

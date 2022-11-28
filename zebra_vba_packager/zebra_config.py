@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from download import download
 
+from .add_repo_history_comment import fix_repo_history_comment, add_repo_history_comment
 from . import util
 from .fix_module_name_length_limitation import (
     _ModnamePair,
@@ -59,13 +60,15 @@ class Source:
     pre_process: Callable = None
 
     git_source: str = None
-    url_source: str = None
-    path_source: Union[str, Path] = None
     git_rev: str = None
+    git_add_version_comment: bool = None
+
+    url_source: str = None
     url_md5: str = None
 
-    glob_extract: Union[str, List[str]] = None
+    path_source: Union[str, Path] = None
 
+    glob_extract: Union[str, List[str]] = None
     glob_include: Union[str, List[str]] = "**/*"
     glob_exclude: Union[str, List[str]] = None
 
@@ -155,7 +158,6 @@ class Config:
                     "git": source.git_source,
                     "url": source.url_source,
                     "path": source.path_source,
-                    None: None,
                 }.items()
                 if j is not None
             ][0]
@@ -270,6 +272,13 @@ class Config:
             if source.auto_bas_namespace:
                 bas_create_namespaced_classes(source.temp_transformed)
 
+            if source.git_add_version_comment or source.git_add_version_comment is None:
+                fix_repo_history_comment(source.temp_transformed)
+                if ltype == "git":
+                    add_repo_history_comment(
+                        source.temp_transformed, link, str(source.git_rev)
+                    )
+
             # post process
             if source.post_process is not None:
                 source.post_process(source)
@@ -309,6 +318,9 @@ class Config:
         namespace_declarations_not_empty = False
 
         fix_module_name_length_limitation(output_dir)
+
+        fix_repo_history_comment(output_dir)
+
         for i in output_dir.rglob("*.cls"):
 
             if i.name.startswith("z__") and i.name.lower().endswith(".cls"):

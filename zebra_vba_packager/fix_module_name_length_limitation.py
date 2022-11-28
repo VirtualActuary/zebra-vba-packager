@@ -15,7 +15,6 @@ re_zebra_namespace = re.compile(
 
 
 def fix_module_name_length_limitation(dirpath):
-    """ """
     modname_reuse = set()
     for p in sorted(Path(dirpath).rglob("*.cls")):
         txt = read_txt(p)
