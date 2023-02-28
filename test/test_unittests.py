@@ -1,11 +1,10 @@
-import re
 import tempfile
-from pprint import pprint
 from textwrap import dedent
-
+import shutil
 import locate
 import unittest
 from pathlib import Path
+import os
 
 with locate.prepend_sys_path(".."):
     from zebra_vba_packager.bas_combining import (
@@ -16,6 +15,7 @@ with locate.prepend_sys_path(".."):
     from zebra_vba_packager.match_tokens import match_tokens
     from zebra_vba_packager.util import to_unix_line_endings
     from zebra_vba_packager import Source, Config
+    from zebra_vba_packager.enforce_variable_syntax import enforce_vba_case
 
 
 def lstripdedent(s):
@@ -431,6 +431,129 @@ class TestFullRun(unittest.TestCase):
                         ],
                         [git_add_version_comment] + zebra_lines,
                     )
+
+
+class TestCasing(unittest.TestCase):
+    def test_enforce_vba_case_pascal(self):
+        # TODO: add vars_overwrite_file examples
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tempfile_example = Path(tmpdir, "Example.bas")
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
+            )
+
+            tempfile_Second = Path(tmpdir, "SecondFile.bas")
+            shutil.copyfile(Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second)
+
+            file_example = Path(os.getcwd(), r".\casing\ExamplePascal.bas").resolve()
+            with open(file_example) as file:
+                content_file_example = file.read()
+
+            file_Second = Path(os.getcwd(), r".\casing\SecondFilePascal.bas").resolve()
+            with open(file_Second) as file:
+                content_file_Second = file.read()
+
+            enforce_vba_case(
+                [tmpdir],
+                case_style="pascal",
+                vars_overwrite_file=None,
+            )
+
+            with open(tempfile_example) as file:
+                content_tempfile_example = file.read()
+
+            with open(tempfile_Second) as file:
+                content_tempfile_Second = file.read()
+
+            self.assertEqual(content_file_example, content_tempfile_example)
+            self.assertEqual(content_file_Second, content_tempfile_Second)
+            shutil.rmtree(tmpdir)
+
+    def test_enforce_vba_case_camel(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tempfile_example = Path(tmpdir, "Example.bas")
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
+            )
+
+            # file_Second = Path(os.getcwd(), r".\casing\SecondFile.bas").resolve()
+            tempfile_Second = Path(tmpdir, "SecondFile.bas")
+            shutil.copyfile(Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second)
+
+            file_example = Path(os.getcwd(), r".\casing\ExampleCamel.bas").resolve()
+            with open(file_example) as file:
+                content_file_example = file.read()
+
+            file_Second = Path(os.getcwd(), r".\casing\SecondFileCamel.bas").resolve()
+            with open(file_Second) as file:
+                content_file_Second = file.read()
+
+            enforce_vba_case(
+                [tmpdir],
+                case_style="camel",
+                vars_overwrite_file=None,
+            )
+
+            with open(tempfile_example) as file:
+                content_tempfile_example = file.read()
+
+            with open(tempfile_Second) as file:
+                content_tempfile_Second = file.read()
+
+            self.assertEqual(content_file_example, content_tempfile_example)
+            self.assertEqual(content_file_Second, content_tempfile_Second)
+
+            shutil.rmtree(tmpdir)
+
+    def test_enforce_vba_case_none(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tempfile_example = Path(tmpdir, "Example.bas")
+
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
+            )
+
+            # file_Second = Path(os.getcwd(), r".\casing\SecondFile.bas").resolve()
+            tempfile_Second = Path(tmpdir, "SecondFile.bas")
+            shutil.copyfile(Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second)
+
+            file_example = Path(os.getcwd(), r".\casing\ExamplePascal.bas").resolve()
+            with open(file_example) as file:
+                content_file_example = file.read()
+
+            file_Second = Path(os.getcwd(), r".\casing\SecondFilePascal.bas").resolve()
+            with open(file_Second) as file:
+                content_file_Second = file.read()
+
+            enforce_vba_case(
+                [tmpdir],
+                case_style=None,
+                vars_overwrite_file=None,
+            )
+
+            with open(tempfile_example) as file:
+                content_tempfile_example = file.read()
+
+            with open(tempfile_Second) as file:
+                content_tempfile_Second = file.read()
+
+            self.assertEqual(content_file_example, content_tempfile_example)
+            self.assertEqual(content_file_Second, content_tempfile_Second)
+
+            shutil.rmtree(tmpdir)
+
+    def test_enforce_vba_case_fail(self):
+        try:
+            enforce_vba_case(
+                ["E:\AA\MiscVBAFunctions\MiscVBAFunctions\Modules"],
+                case_style="incorrect_option",
+                vars_overwrite_file=None,
+            )
+        except ValueError:
+            self.assertTrue(True)
+        else:
+            self.assertTrue(False)
 
 
 if __name__ == "__main__":
