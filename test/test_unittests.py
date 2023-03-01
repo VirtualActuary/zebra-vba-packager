@@ -444,7 +444,7 @@ class TestFullRun(unittest.TestCase):
 class TestCasing(unittest.TestCase):
     def test_enforce_vba_case_pascal(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            tempfile_example = Path(tmpdir, "Example.bas")
+            tempfile_example = Path(tmpdir, "examplePascal.bas")
             shutil.copyfile(
                 Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
             )
@@ -474,13 +474,15 @@ class TestCasing(unittest.TestCase):
             with open(tempfile_Second) as file:
                 content_tempfile_Second = file.read()
 
+            self.assertEqual(os.listdir(tmpdir)[0], "ExamplePascal.bas")
+
             self.assertEqual(content_file_example, content_tempfile_example)
             self.assertEqual(content_file_Second, content_tempfile_Second)
             shutil.rmtree(tmpdir)
 
     def test_enforce_vba_case_camel(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            tempfile_example = Path(tmpdir, "Example.bas")
+            tempfile_example = Path(tmpdir, "ExampleCamel.bas")
             shutil.copyfile(
                 Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
             )
@@ -509,6 +511,8 @@ class TestCasing(unittest.TestCase):
 
             with open(tempfile_Second) as file:
                 content_tempfile_Second = file.read()
+
+            self.assertEqual(os.listdir(tmpdir)[0], "exampleCamel.bas")
 
             self.assertEqual(content_file_example, content_tempfile_example)
             self.assertEqual(content_file_Second, content_tempfile_Second)
@@ -547,6 +551,8 @@ class TestCasing(unittest.TestCase):
 
             with open(tempfile_Second) as file:
                 content_tempfile_Second = file.read()
+
+            self.assertEqual(os.listdir(tmpdir)[0], "Example.bas")
 
             self.assertEqual(content_file_example, content_tempfile_example)
             self.assertEqual(content_file_Second, content_tempfile_Second)
