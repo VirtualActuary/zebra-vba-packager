@@ -10,7 +10,7 @@ def enforce_vba_case(
     Enforce VBA casing.
     This includes:
         - Checking that variables start with the correct casing
-        - Checking that variables casing is consistent
+        - Checking that variables casing is consistent across all files.
         - Filenames start with the correct casing
         - DLL variables remain unchanged.
         - Excluding desired variables.
