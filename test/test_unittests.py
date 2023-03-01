@@ -358,7 +358,11 @@ class TestFullRun(unittest.TestCase):
                 zip_ref.extractall(git_tmpdir)
             git_source = Path(git_tmpdir).joinpath("misc-vba-git-history-example")
             git_ref = "eac3bbac2faa5b40db766d439ebac06d0638f1c1"
-            git_add_version_comment_params = [None, True, False]  # None defaults to True
+            git_add_version_comment_params = [
+                None,
+                True,
+                False,
+            ]  # None defaults to True
 
             for git_add_version_comment in git_add_version_comment_params:
                 with tempfile.TemporaryDirectory() as tmpdir:
@@ -440,8 +444,6 @@ class TestFullRun(unittest.TestCase):
 
 class TestCasing(unittest.TestCase):
     def test_enforce_vba_case_pascal(self):
-        # TODO: add vars_overwrite_file examples
-
         with tempfile.TemporaryDirectory() as tmpdir:
             tempfile_example = Path(tmpdir, "Example.bas")
             shutil.copyfile(
@@ -449,7 +451,9 @@ class TestCasing(unittest.TestCase):
             )
 
             tempfile_Second = Path(tmpdir, "SecondFile.bas")
-            shutil.copyfile(Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second)
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second
+            )
 
             file_example = Path(os.getcwd(), r".\casing\ExamplePascal.bas").resolve()
             with open(file_example) as file:
@@ -482,9 +486,10 @@ class TestCasing(unittest.TestCase):
                 Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
             )
 
-            # file_Second = Path(os.getcwd(), r".\casing\SecondFile.bas").resolve()
             tempfile_Second = Path(tmpdir, "SecondFile.bas")
-            shutil.copyfile(Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second)
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second
+            )
 
             file_example = Path(os.getcwd(), r".\casing\ExampleCamel.bas").resolve()
             with open(file_example) as file:
@@ -519,9 +524,10 @@ class TestCasing(unittest.TestCase):
                 Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
             )
 
-            # file_Second = Path(os.getcwd(), r".\casing\SecondFile.bas").resolve()
             tempfile_Second = Path(tmpdir, "SecondFile.bas")
-            shutil.copyfile(Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second)
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second
+            )
 
             file_example = Path(os.getcwd(), r".\casing\ExamplePascal.bas").resolve()
             with open(file_example) as file:
@@ -549,16 +555,103 @@ class TestCasing(unittest.TestCase):
             shutil.rmtree(tmpdir)
 
     def test_enforce_vba_case_fail(self):
-        try:
+        with self.assertRaises(ValueError):
             enforce_vba_case(
                 ["E:\AA\MiscVBAFunctions\MiscVBAFunctions\Modules"],
                 case_style="incorrect_option",
                 vars_overwrite_file=None,
             )
-        except ValueError:
-            self.assertTrue(True)
-        else:
-            self.assertTrue(False)
+
+    def test_enforce_vba_case_varchoice(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tempfile_example = Path(tmpdir, "Example.bas")
+            varchoise_file = Path(os.getcwd(), r".\casing\varchoice.txt").resolve()
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
+            )
+
+            tempfile_Second = Path(tmpdir, "SecondFile.bas")
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\SecondFile.bas").resolve(), tempfile_Second
+            )
+
+            file_example = Path(
+                os.getcwd(), r".\casing\ExamplePascalVarchoise.bas"
+            ).resolve()
+            with open(file_example) as file:
+                content_file_example = file.read()
+
+            file_Second = Path(
+                os.getcwd(), r".\casing\SecondFilePascalVarchoise.bas"
+            ).resolve()
+            with open(file_Second) as file:
+                content_file_Second = file.read()
+
+            enforce_vba_case(
+                [tmpdir],
+                case_style="pascal",
+                vars_overwrite_file=varchoise_file,
+            )
+
+            with open(tempfile_example) as file:
+                content_tempfile_example = file.read()
+
+            with open(tempfile_Second) as file:
+                content_tempfile_Second = file.read()
+
+            self.assertEqual(content_file_example, content_tempfile_example)
+            self.assertEqual(content_file_Second, content_tempfile_Second)
+            shutil.rmtree(tmpdir)
+
+    def test_enforce_vba_case_DLL_pascal(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tempfile_example = Path(tmpdir, "ExampleDLL.bas")
+
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\ExampleDLL.bas").resolve(),
+                tempfile_example,
+            )
+
+            file_example = Path(os.getcwd(), r".\casing\ExampleDLLPascal.bas").resolve()
+            with open(file_example) as file:
+                content_file_example = file.read()
+
+            enforce_vba_case(
+                [tmpdir],
+                case_style="pascal",
+                vars_overwrite_file=None,
+            )
+
+            with open(tempfile_example) as file:
+                content_tempfile_example = file.read()
+
+            self.assertEqual(content_file_example, content_tempfile_example)
+            shutil.rmtree(tmpdir)
+
+    def test_enforce_vba_case_DLL_camel(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tempfile_example = Path(tmpdir, "ExampleDLL.bas")
+
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\ExampleDLL.bas").resolve(),
+                tempfile_example,
+            )
+
+            file_example = Path(os.getcwd(), r".\casing\ExampleDLLCamel.bas").resolve()
+            with open(file_example) as file:
+                content_file_example = file.read()
+
+            enforce_vba_case(
+                [tmpdir],
+                case_style="camel",
+                vars_overwrite_file=None,
+            )
+
+            with open(tempfile_example) as file:
+                content_tempfile_example = file.read()
+
+            self.assertEqual(content_file_example, content_tempfile_example)
+            shutil.rmtree(tmpdir)
 
 
 if __name__ == "__main__":
