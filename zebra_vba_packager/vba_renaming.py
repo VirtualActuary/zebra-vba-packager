@@ -26,7 +26,7 @@ class NameTransformer:
         if isinstance(self.name_changes, dict):
             return x.lower() in self.name_changes
         else:
-            for (i, j) in self.name_changes:
+            for i, j in self.name_changes:
                 if isinstance(i, str):
                     if i.lower() == x.lower():
                         return True
