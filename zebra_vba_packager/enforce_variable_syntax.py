@@ -73,7 +73,8 @@ def _rename_filename(f, case_style):
 def _fetch_vars_overwrite_file_data(vars_overwrite_file):
     tokens_dict = {}
     try:
-        overwrites = open(vars_overwrite_file).read().split("\n")
+        with open(vars_overwrite_file) as file:
+            overwrites = file.read().split("\n")
     except Exception as e:
         print(e)
     else:
