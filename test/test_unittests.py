@@ -39,7 +39,6 @@ class TestBasCombining(unittest.TestCase):
         )
 
     def test_compile_code_into_sections_functions(self):
-
         x = lstripdedent(
             """
             Attribute VB_Name = "MiscArray"

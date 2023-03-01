@@ -207,7 +207,6 @@ def compile_bas_sources_into_single_file(
     sources: Dict[Union[str, Path], Union[str, Path, List[VBAToken]]],
     module_name: Union[str, None] = None,
 ) -> str:
-
     sources = {
         key: deepcopy(val) if isinstance(val, list) else tokenize(val)
         for key, val in sources.items()
@@ -278,7 +277,6 @@ def compile_bas_sources_into_single_file(
         while (idx := idx + 1) < len(classifiers):
             if classifiers[idx].type == "unknown":
                 for j in range(idx + 1, len(classifiers)):
-
                     classifiers[idx + 1].tokens = (
                         classifiers[idx].tokens + classifiers[idx + 1].tokens
                     )

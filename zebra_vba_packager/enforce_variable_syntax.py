@@ -138,7 +138,6 @@ def _token_is_dll_name(tokens, index) -> bool:
 
 
 def _get_vba_filenames(codedirs, exts):
-
     vbafiles = []
     import os
 

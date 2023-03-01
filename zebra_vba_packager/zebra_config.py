@@ -48,7 +48,6 @@ def caller_path(frame_info: inspect.FrameInfo):
 
 
 def caller_id(frame_info: inspect.FrameInfo):
-
     if callpath := caller_path(frame_info) is None:
         callpath = uuid.uuid4()
 
@@ -148,7 +147,6 @@ class Config:
     def run(self, output_dir=None):
         util.delete_old_files_in_tempdir()
         for source in self.sources:
-
             if source.pre_process is not None:
                 source.pre_process(source)
 
@@ -322,7 +320,6 @@ class Config:
         fix_repo_history_comment(output_dir)
 
         for i in output_dir.rglob("*.cls"):
-
             if i.name.startswith("z__") and i.name.lower().endswith(".cls"):
                 txt = util.read_txt(i)
 

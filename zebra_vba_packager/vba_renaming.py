@@ -39,7 +39,7 @@ class NameTransformer:
         if isinstance(self.name_changes, dict):
             return self.name_changes.get(x.lower(), x)
         else:
-            for (i, j) in self.name_changes:
+            for i, j in self.name_changes:
                 if isinstance(i, str):
                     if i.lower() == x.lower():
                         if isinstance(j, str):
@@ -60,7 +60,6 @@ def write_tokens(fname, tokens):
 
 
 def vba_directory_mapping(dirname):
-
     files_to_tokens = {}
     for i in list(Path(dirname).rglob("*.bas")) + list(Path(dirname).rglob("*.cls")):
         files_to_tokens[i] = tokenize(read_txt(i))
