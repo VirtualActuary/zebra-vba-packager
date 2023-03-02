@@ -16,7 +16,7 @@ with locate.prepend_sys_path(".."):
     from zebra_vba_packager.match_tokens import match_tokens
     from zebra_vba_packager.util import to_unix_line_endings
     from zebra_vba_packager import Source, Config
-    from zebra_vba_packager.enforce_variable_syntax import enforce_vba_case
+    from zebra_vba_packager.fix_casing import fix_casing
 
 
 def lstripdedent(s):
@@ -344,7 +344,6 @@ class TestFullRun(unittest.TestCase):
         ).run(git_dir := Path(locate.this_dir(), "temporary_output/misc-vba-git"))
 
         tmp_dir = Path(locate.this_dir(), "misc-vba-git-comparison")
-
         self.assertEqual(
             Path(git_dir, "z__Fn.cls").read_text(),
             Path(tmp_dir, "z__Fn.cls").read_text(),
@@ -462,8 +461,8 @@ class TestCasing(unittest.TestCase):
             with open(file_Second) as file:
                 content_file_Second = file.read()
 
-            enforce_vba_case(
-                [tmpdir],
+            fix_casing(
+                tmpdir,
                 case_style="pascal",
                 vars_overwrite_file=None,
             )
@@ -500,8 +499,8 @@ class TestCasing(unittest.TestCase):
             with open(file_Second) as file:
                 content_file_Second = file.read()
 
-            enforce_vba_case(
-                [tmpdir],
+            fix_casing(
+                tmpdir,
                 case_style="camel",
                 vars_overwrite_file=None,
             )
@@ -540,8 +539,8 @@ class TestCasing(unittest.TestCase):
             with open(file_Second) as file:
                 content_file_Second = file.read()
 
-            enforce_vba_case(
-                [tmpdir],
+            fix_casing(
+                tmpdir,
                 case_style=None,
                 vars_overwrite_file=None,
             )
@@ -561,8 +560,8 @@ class TestCasing(unittest.TestCase):
 
     def test_enforce_vba_case_fail(self):
         with self.assertRaises(ValueError):
-            enforce_vba_case(
-                ["E:\AA\MiscVBAFunctions\MiscVBAFunctions\Modules"],
+            fix_casing(
+                r"SomePath\foo\bar",
                 case_style="incorrect_option",
                 vars_overwrite_file=None,
             )
@@ -592,8 +591,8 @@ class TestCasing(unittest.TestCase):
             with open(file_Second) as file:
                 content_file_Second = file.read()
 
-            enforce_vba_case(
-                [tmpdir],
+            fix_casing(
+                tmpdir,
                 case_style="pascal",
                 vars_overwrite_file=varchoise_file,
             )
@@ -621,8 +620,8 @@ class TestCasing(unittest.TestCase):
             with open(file_example) as file:
                 content_file_example = file.read()
 
-            enforce_vba_case(
-                [tmpdir],
+            fix_casing(
+                tmpdir,
                 case_style="pascal",
                 vars_overwrite_file=None,
             )
@@ -646,8 +645,8 @@ class TestCasing(unittest.TestCase):
             with open(file_example) as file:
                 content_file_example = file.read()
 
-            enforce_vba_case(
-                [tmpdir],
+            fix_casing(
+                tmpdir,
                 case_style="camel",
                 vars_overwrite_file=None,
             )
