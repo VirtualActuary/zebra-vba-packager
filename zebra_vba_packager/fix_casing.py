@@ -1,10 +1,13 @@
 from .vba_tokenizer import vba_names, tokenize, tokens_to_str
 import os
 from typing import Union
+from pathlib import Path
 
 
-def enforce_vba_case(
-    code_dirs: list, case_style: Union[str, None] = None, vars_overwrite_file=None
+def fix_casing(
+    code_dir: Union[str, Path],
+    case_style: Union[str, None] = None,
+    vars_overwrite_file: Union[str, Path, list] = None,
 ):
     """
     Enforce VBA casing.
@@ -16,7 +19,7 @@ def enforce_vba_case(
         - Excluding desired variables.
 
     Args:
-        code_dirs: List of directories containing the '.bas', '.cls', '.txt' files to enforce casing on.
+        code_dir: List of directories containing the '.bas', '.cls', '.txt' files to enforce casing on.
         case_style: Casing style. Options -> None, 'camel', 'pascal'. Not case-sensitive
         vars_overwrite_file: File containing variable names that overwrites the selected casing option.
     """
@@ -32,7 +35,7 @@ def enforce_vba_case(
     if vars_overwrite_file is not None:
         tokens_dict = _fetch_vars_overwrite_file_data(vars_overwrite_file)
 
-    vbafiles = _get_vba_filenames(code_dirs, exts)
+    vbafiles = _get_vba_filenames(code_dir, exts)
 
     for file_name_input in vbafiles:
         file_name_output = _rename_filename(file_name_input, case_style)
@@ -137,16 +140,13 @@ def _token_is_dll_name(tokens, index) -> bool:
     return False
 
 
-def _get_vba_filenames(codedirs, exts):
+def _get_vba_filenames(codedir, exts):
     vbafiles = []
-    import os
+    for d, dirs, files in os.walk(codedir):
+        for f in files:
+            if not f.lower()[-4:] in exts:
+                continue
 
-    for codedir in codedirs:
-        for d, dirs, files in os.walk(codedir):
-            for f in files:
-                if not f.lower()[-4:] in exts:
-                    continue
-
-                path = os.path.join(d, f)
-                vbafiles.append(path)
+            path = os.path.join(d, f)
+            vbafiles.append(path)
     return vbafiles
