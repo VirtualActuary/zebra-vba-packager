@@ -49,7 +49,7 @@ def pack(path, archivepath, compression_type=None, password=None):
     ext = os.path.splitext(archivepath)[-1].lower()
 
     if compression_type is None:
-        for (achive_format, _) in shutil.get_archive_formats():
+        for achive_format, _ in shutil.get_archive_formats():
             with in_temp_directory():  # don't trust dry runs
                 tstout = shutil.make_archive("_", achive_format, "_", dry_run=True)
                 tstext = os.path.splitext(tstout)[-1]
