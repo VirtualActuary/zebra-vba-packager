@@ -607,6 +607,31 @@ class TestCasing(unittest.TestCase):
             self.assertEqual(content_file_Second, content_tempfile_Second)
             shutil.rmtree(tmpdir)
 
+    def test_enforce_vba_case_varchoice_list(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tempfile_example = Path(tmpdir, "example.bas")
+            shutil.copyfile(
+                Path(os.getcwd(), r".\casing\Example.bas").resolve(), tempfile_example
+            )
+
+            file_example = Path(
+                os.getcwd(), r".\casing\ExampleVarchoiseList.bas"
+            ).resolve()
+            with open(file_example) as file:
+                content_file_example = file.read()
+
+            fix_casing(
+                tmpdir,
+                case_style=None,
+                vars_overwrite_file=["cOl", "enTRY"],
+            )
+
+            with open(tempfile_example) as file:
+                content_tempfile_example = file.read()
+
+            self.assertEqual(content_file_example, content_tempfile_example)
+            shutil.rmtree(tmpdir)
+
     def test_enforce_vba_case_DLL_pascal(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tempfile_example = Path(tmpdir, "ExampleDLL.bas")
