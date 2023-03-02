@@ -138,14 +138,14 @@ class Source:
 
 
 class Config:
-    def __init__(self, *sources, casing=None, casing_exclusions=None):
+    def __init__(self, *sources, casing=None, casing_overwrites=None):
         # noinspection PyProtectedMember
         self.caller_path = caller_path(inspect.stack()[1])
         self.caller_id = caller_id(inspect.stack()[1])
         self.sources = sources
         self.output_dir = None
         self.casing = casing
-        self.casing_exclusions = casing_exclusions
+        self.casing_overwrites = casing_overwrites
 
     def run(self, output_dir=None):
         util.delete_old_files_in_tempdir()
@@ -322,8 +322,8 @@ class Config:
 
         fix_repo_history_comment(output_dir)
 
-        if self.casing is not None or self.casing_exclusions is not None:
-            fix_casing(output_dir, self.casing, self.casing_exclusions)
+        if self.casing is not None or self.casing_overwrites is not None:
+            fix_casing(output_dir, self.casing, self.casing_overwrites)
 
         for i in output_dir.rglob("*.cls"):
             if i.name.startswith("z__") and i.name.lower().endswith(".cls"):
