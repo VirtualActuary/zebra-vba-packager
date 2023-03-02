@@ -349,6 +349,54 @@ class TestFullRun(unittest.TestCase):
             Path(tmp_dir, "z__Fn.cls").read_text(),
         )
 
+    def test_github_download_and_combine_and_change_casing_camel(self):
+        Config(
+            Source(
+                git_source="https://github.com/VirtualActuary/MiscVBAFunctions.git",
+                git_rev="8e5e8f3",
+                glob_include=[
+                    "MiscVBAFunctions/**/*.bas",
+                    "MiscVBAFunctions/**/*.cls",
+                    "**/thisworkbook.txt",
+                ],
+                glob_exclude=["**/Test__*"],
+                combine_bas_files="Fn",
+                auto_bas_namespace=True,
+                auto_cls_rename=False,
+            ),
+            casing="camel",
+        ).run(git_dir := Path(locate.this_dir(), "temporary_output/misc-vba-git-change-casing"))
+
+        tmp_dir = Path(locate.this_dir(), "misc-vba-git-comparison-casing-change/camel")
+        self.assertEqual(
+            Path(git_dir, "z__Fn.cls").read_text(),
+            Path(tmp_dir, "z__Fn.cls").read_text(),
+        )
+
+    def test_github_download_and_combine_and_change_casing_pacal(self):
+        Config(
+            Source(
+                git_source="https://github.com/VirtualActuary/MiscVBAFunctions.git",
+                git_rev="8e5e8f3",
+                glob_include=[
+                    "MiscVBAFunctions/**/*.bas",
+                    "MiscVBAFunctions/**/*.cls",
+                    "**/thisworkbook.txt",
+                ],
+                glob_exclude=["**/Test__*"],
+                combine_bas_files="Fn",
+                auto_bas_namespace=True,
+                auto_cls_rename=False,
+            ),
+            casing="pascal",
+        ).run(git_dir := Path(locate.this_dir(), "temporary_output/misc-vba-git-change-casing"))
+
+        tmp_dir = Path(locate.this_dir(), "misc-vba-git-comparison-casing-change/pascal")
+        self.assertEqual(
+            Path(git_dir, "z__Fn.cls").read_text(),
+            Path(tmp_dir, "z__Fn.cls").read_text(),
+        )
+
     def test_github_history(self):
         git_source_zip = locate.this_dir().joinpath("misc-vba-git-history-example.zip")
         with tempfile.TemporaryDirectory() as git_tmpdir:
