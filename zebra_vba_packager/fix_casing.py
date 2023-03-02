@@ -73,7 +73,10 @@ def _rename_filename(f, case_style):
     )
 
 
-def _fetch_vars_overwrite_file_data(vars_overwrite_file):
+def _fetch_vars_overwrite_file_data(vars_overwrite_file: Union[str, Path, list]):
+    if type(vars_overwrite_file) == list:
+        return {entry.lower(): entry for entry in vars_overwrite_file}
+
     tokens_dict = {}
     try:
         with open(vars_overwrite_file) as file:
