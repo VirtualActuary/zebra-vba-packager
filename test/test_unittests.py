@@ -365,7 +365,11 @@ class TestFullRun(unittest.TestCase):
                 auto_cls_rename=False,
             ),
             casing="camel",
-        ).run(git_dir := Path(locate.this_dir(), "temporary_output/misc-vba-git-change-casing"))
+        ).run(
+            git_dir := Path(
+                locate.this_dir(), "temporary_output/misc-vba-git-change-casing"
+            )
+        )
 
         tmp_dir = Path(locate.this_dir(), "misc-vba-git-comparison-casing-change/camel")
         self.assertEqual(
@@ -389,9 +393,15 @@ class TestFullRun(unittest.TestCase):
                 auto_cls_rename=False,
             ),
             casing="pascal",
-        ).run(git_dir := Path(locate.this_dir(), "temporary_output/misc-vba-git-change-casing"))
+        ).run(
+            git_dir := Path(
+                locate.this_dir(), "temporary_output/misc-vba-git-change-casing"
+            )
+        )
 
-        tmp_dir = Path(locate.this_dir(), "misc-vba-git-comparison-casing-change/pascal")
+        tmp_dir = Path(
+            locate.this_dir(), "misc-vba-git-comparison-casing-change/pascal"
+        )
         self.assertEqual(
             Path(git_dir, "z__Fn.cls").read_text(),
             Path(tmp_dir, "z__Fn.cls").read_text(),
