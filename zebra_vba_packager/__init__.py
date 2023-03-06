@@ -10,3 +10,4 @@ from .excel_compilation import (
     is_locked,
 )
 from .util import backup_last_50_paths
+from .fix_casing import fix_casing
