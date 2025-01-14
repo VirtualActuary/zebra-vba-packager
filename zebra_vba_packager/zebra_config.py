@@ -222,7 +222,7 @@ class Config:
             util.rmtree(source.temp_transformed, ignore_errors=True)
             os.makedirs(source.temp_transformed, exist_ok=True)
             for i in file_matches:
-                reli = i.relative_to(source.temp_downloads)
+                reli = i.resolve().relative_to(source.temp_downloads.resolve())
                 dst = source.temp_transformed.joinpath(reli)
                 os.makedirs(dst.parent, exist_ok=True)
                 shutil.copy2(i, source.temp_transformed.joinpath(reli))
@@ -300,7 +300,7 @@ class Config:
                 if i.is_dir():
                     continue
 
-                reli = i.relative_to(source.temp_transformed)
+                reli = i.resolve().relative_to(source.temp_transformed.resolve())
                 if str(reli).lower()[-4:] in (".cls", ".bas"):
                     modname = vba_module_name(tokenize(util.read_txt(i)))
                     dst = output_dir.joinpath(modname + str(reli).lower()[-4:])
