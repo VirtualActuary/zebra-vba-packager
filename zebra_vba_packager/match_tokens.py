@@ -58,7 +58,6 @@ def match_tokens(
                 continue
 
             while (k := k + 1) < len(matchables):
-
                 if matchables[k].re.match(token_at(j).text):
                     if k == len(matchables) - 1:
                         matched = 2  # final match

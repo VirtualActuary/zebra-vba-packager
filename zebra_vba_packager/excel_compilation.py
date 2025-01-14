@@ -14,25 +14,45 @@ _runmacro_vbs = locate.this_dir().joinpath("bin", "runmacro.vbs")
 _saveasxlsx_vbs = locate.this_dir().joinpath("bin", "saveasxlsx.vbs")
 
 
+def _file_is_locked(path) -> Union[bool, Exception]:
+    if not Path(path).exists():
+        return False
+
+    if Path(path).is_dir():
+        for i in Path(path).rglob("*"):
+            if i.is_file():
+                if _is_locked_using_move(i):
+                    return True
+    else:
+        path_moved = str(path) + ".testfilemovable000000"
+        for i in range(1, 1000000):
+            if os.path.exists(path_moved):
+                path_moved = path_moved[:-6] + ("%06d" % i)
+            else:
+                break
+
+        try:
+            os.rename(path, path_moved)
+        except (WindowsError, PermissionError) as e:
+            return e
+
+        os.rename(path_moved, path)
+        return False
+
+
 def is_locked(path) -> Union[bool, Exception]:
     if not Path(path).exists():
         return False
 
-    path_moved = str(path) + ".testfilemovable000000"
-    for i in range(1, 1000000):
-        if os.path.exists(path_moved):
-            path_moved = path_moved[:-6] + ("%06d" % i)
-        else:
-            break
+    if Path(path).is_dir():
+        for i in Path(path).rglob("*"):
+            if i.is_file():
+                if _file_is_locked(i):
+                    return True
+        return False
 
-    # test if movable
-    try:
-        os.rename(path, path_moved)
-    except (WindowsError, PermissionError) as e:
-        return e
-
-    os.rename(path_moved, path)
-    return False
+    else:
+        return _file_is_locked(path)
 
 
 def compile_xl(src_dir, dst_file=None):

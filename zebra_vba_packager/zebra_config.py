@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from download import download
 
-from .add_repo_history_comment import fix_repo_history_comment, add_repo_history_comment
+from .fix_repo_history_comment import fix_repo_history_comment, add_repo_history_comment
 from . import util
 from .fix_module_name_length_limitation import (
     _ModnamePair,
@@ -36,6 +36,7 @@ from pathvalidate import sanitize_filename
 
 from .py7z import unpack
 from .vba_tokenizer import tokenize
+from .fix_casing import fix_casing
 
 
 def strhash(x):
@@ -48,7 +49,6 @@ def caller_path(frame_info: inspect.FrameInfo):
 
 
 def caller_id(frame_info: inspect.FrameInfo):
-
     if callpath := caller_path(frame_info) is None:
         callpath = uuid.uuid4()
 
@@ -138,17 +138,18 @@ class Source:
 
 
 class Config:
-    def __init__(self, *sources):
+    def __init__(self, *sources, casing=None, casing_overwrites=None):
         # noinspection PyProtectedMember
         self.caller_path = caller_path(inspect.stack()[1])
         self.caller_id = caller_id(inspect.stack()[1])
         self.sources = sources
         self.output_dir = None
+        self.casing = casing
+        self.casing_overwrites = casing_overwrites
 
     def run(self, output_dir=None):
         util.delete_old_files_in_tempdir()
         for source in self.sources:
-
             if source.pre_process is not None:
                 source.pre_process(source)
 
@@ -321,8 +322,10 @@ class Config:
 
         fix_repo_history_comment(output_dir)
 
-        for i in output_dir.rglob("*.cls"):
+        if self.casing is not None or self.casing_overwrites is not None:
+            fix_casing(output_dir, self.casing, self.casing_overwrites)
 
+        for i in output_dir.rglob("*.cls"):
             if i.name.startswith("z__") and i.name.lower().endswith(".cls"):
                 txt = util.read_txt(i)
 
